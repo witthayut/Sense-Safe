@@ -1,0 +1,47 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/auth/login_screen.dart';
+import '../features/auth/register_screen.dart';
+import '../features/auth/forgot_password_screen.dart';
+import '../features/onboarding/welcome_screen.dart';
+import '../features/assessment/survey_screen.dart';
+import '../features/assessment/results_screen.dart';
+import '../features/home/home_shell.dart';
+import '../services/auth_controller.dart';
+
+/// Auth-aware router. Unauthenticated users are bounced to /login;
+/// the survey/onboarding/results flow is reachable while signed in.
+final routerProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    initialLocation: '/login',
+    redirect: (context, state) {
+      final signedIn = ref.read(authControllerProvider) != null;
+      final loc = state.matchedLocation;
+      const authRoutes = {'/login', '/register', '/forgot'};
+      final onAuthRoute = authRoutes.contains(loc);
+
+      if (!signedIn && !onAuthRoute) return '/login';
+      if (signedIn && onAuthRoute) return '/home';
+      return null;
+    },
+    refreshListenable: _AuthListenable(ref),
+    routes: [
+      GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (c, s) => const RegisterScreen()),
+      GoRoute(path: '/forgot', builder: (c, s) => const ForgotPasswordScreen()),
+      GoRoute(path: '/onboarding', builder: (c, s) => const WelcomeScreen()),
+      GoRoute(path: '/survey', builder: (c, s) => const SurveyScreen()),
+      GoRoute(path: '/results', builder: (c, s) => const ResultsScreen()),
+      GoRoute(path: '/home', builder: (c, s) => const HomeShell()),
+    ],
+  );
+});
+
+/// Bridges Riverpod auth changes to go_router's refresh mechanism.
+class _AuthListenable extends ChangeNotifier {
+  _AuthListenable(Ref ref) {
+    ref.listen(authControllerProvider, (_, __) => notifyListeners());
+  }
+}

@@ -1,0 +1,39 @@
+name: haptic_drive
+description: "Haptic Drive — felt turn-by-turn navigation for different learning styles."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management (Phase 1)
+  flutter_riverpod: ^2.6.1
+
+  # Routing (Phase 1)
+  go_router: ^14.2.7
+
+  # Local persistence (Phase 1)
+  shared_preferences: ^2.3.2
+
+  # --- Added in later phases (kept here as a reference; uncomment when wiring up) ---
+  # flutter_blue_plus: ^1.32.12        # Phase 3 — real wristband BLE
+  # mapbox_maps_flutter: ^2.3.0        # Phase 4 — map + navigation
+  # geolocator: ^13.0.1                # Phase 4 — GPS + heading
+  # firebase_core: ^3.6.0              # Phase 1.5 — real backend
+  # firebase_auth: ^5.3.1
+  # cloud_firestore: ^5.4.4
+  # flutter_local_notifications: ^17.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
