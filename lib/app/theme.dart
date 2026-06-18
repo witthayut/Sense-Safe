@@ -12,8 +12,15 @@ class AppColors {
   static const Color ink = Color(0xFF1F2A26);
   static const Color inkSoft = Color(0xFF6B7A74);
   static const Color line = Color(0xFFE3E8E6);
+  static const Color surfaceMuted = Color(0xFFEDEFF1); // inset controls (pulse buttons)
   static const Color warn = Color(0xFFE08A4B);
   static const Color danger = Color(0xFFD45D5D);
+
+  // Accent colours for the results "spatial profile" bars (one per dimension).
+  static const Color chartBlue = Color(0xFF3E7CB1);
+  static const Color chartGreen = Color(0xFF3FA46B);
+  static const Color chartPink = Color(0xFFD94F7A);
+  static const Color chartPurple = Color(0xFF7A5BD0);
 }
 
 class AppTheme {

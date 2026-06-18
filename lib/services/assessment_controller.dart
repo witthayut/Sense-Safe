@@ -50,6 +50,14 @@ class AssessmentController extends Notifier<AssessmentState> {
     return profile;
   }
 
+  /// Manually override the friendly "spatial type" label (from the results
+  /// screen's "Pick a type manually" option). No-op if there's no profile yet.
+  void setSpatialType(String type) {
+    final profile = state.profile;
+    if (profile == null) return;
+    state = state.copyWith(profile: profile.copyWith(spatialType: type));
+  }
+
   void reset() {
     state = AssessmentState(
       answers: List<int?>.filled(kSurveyQuestions.length, null),

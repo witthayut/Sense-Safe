@@ -93,9 +93,8 @@ class _BandCard extends StatelessWidget {
             ),
             if (band.isConnected)
               TextButton.icon(
-                onPressed: () => ref
-                    .read(bleControllerProvider.notifier)
-                    .testVibration(band.wrist),
+                onPressed: () => context.push(
+                    '/calibrate/${band.wrist == Wrist.left ? 'left' : 'right'}'),
                 icon: const Icon(Icons.vibration, size: 18),
                 label: const Text('Test'),
               ),

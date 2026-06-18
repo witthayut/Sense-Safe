@@ -8,7 +8,9 @@ import '../features/auth/forgot_password_screen.dart';
 import '../features/onboarding/welcome_screen.dart';
 import '../features/assessment/survey_screen.dart';
 import '../features/assessment/results_screen.dart';
+import '../features/calibration/test_vibration_screen.dart';
 import '../features/home/home_shell.dart';
+import '../models/wristband.dart';
 import '../services/auth_controller.dart';
 
 /// Auth-aware router. Unauthenticated users are bounced to /login;
@@ -34,6 +36,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/onboarding', builder: (c, s) => const WelcomeScreen()),
       GoRoute(path: '/survey', builder: (c, s) => const SurveyScreen()),
       GoRoute(path: '/results', builder: (c, s) => const ResultsScreen()),
+      GoRoute(
+        path: '/calibrate/:wrist',
+        builder: (c, s) {
+          final wrist =
+              s.pathParameters['wrist'] == 'left' ? Wrist.left : Wrist.right;
+          return TestVibrationScreen(wrist: wrist);
+        },
+      ),
       GoRoute(path: '/home', builder: (c, s) => const HomeShell()),
     ],
   );
