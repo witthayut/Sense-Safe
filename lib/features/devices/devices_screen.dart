@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../models/wristband.dart';
@@ -29,12 +30,12 @@ class DevicesScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           _BandTile(
             band: ble.left,
-            onTest: () => _buzz(context, notifier, Wrist.left),
+            onTest: () => context.push('/calibrate/left'),
           ),
           const SizedBox(height: 12),
           _BandTile(
             band: ble.right,
-            onTest: () => _buzz(context, notifier, Wrist.right),
+            onTest: () => context.push('/calibrate/right'),
           ),
           const SizedBox(height: 24),
           if (!ble.bothConnected)
@@ -61,19 +62,6 @@ class DevicesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _buzz(
-      BuildContext context, BleController notifier, Wrist wrist) async {
-    final ok = await notifier.testVibration(wrist);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok
-            ? '${wrist == Wrist.left ? 'Left' : 'Right'} wristband buzzed'
-            : 'Connect the wristband first'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
 }
 
 class _BandTile extends StatelessWidget {
