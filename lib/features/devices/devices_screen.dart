@@ -5,8 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../models/wristband.dart';
 import '../../services/ble_controller.dart';
+import 'waiting_screen.dart';
 
 /// Devices tab — pairing status + test vibration for both wristbands.
+///
+/// Three states map directly to the Figma frames:
+///  - devices1 (idle/disconnected) → tile list + "Connect" button
+///  - waiting (scanning/connecting) → [WaitingScreen]
+///  - devices2 (connected)         → tile list + "Disconnect" button
 class DevicesScreen extends ConsumerWidget {
   const DevicesScreen({super.key});
 
@@ -14,6 +20,14 @@ class DevicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ble = ref.watch(bleControllerProvider);
     final notifier = ref.read(bleControllerProvider.notifier);
+
+    final isConnecting = _isMidConnection(ble);
+
+    if (isConnecting) {
+      return WaitingScreen(
+        onCancel: notifier.disconnect,
+      );
+    }
 
     return SafeArea(
       child: ListView(
@@ -24,7 +38,7 @@ class DevicesScreen extends ConsumerWidget {
           Text(
             ble.bothConnected
                 ? 'Both wristbands paired & connected'
-                : 'Connect your wristbands to start',
+                : 'BLE status for both wristbands and a quick test pulse.',
             style: const TextStyle(color: AppColors.inkSoft),
           ),
           const SizedBox(height: 20),
@@ -42,10 +56,13 @@ class DevicesScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: notifier.scanAndConnect,
               icon: const Icon(Icons.bluetooth_searching),
-              label: const Text('Scan & connect'),
+              label: const Text('Connect'),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.sageDark,
                 minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
+                ),
               ),
             )
           else
@@ -55,11 +72,23 @@ class DevicesScreen extends ConsumerWidget {
               label: const Text('Disconnect'),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
+                ),
               ),
             ),
         ],
       ),
     );
+  }
+
+  /// True while either band is actively scanning or connecting —
+  /// this is the moment the Figma "waiting" frame should be shown.
+  bool _isMidConnection(BleState ble) {
+    bool mid(Wristband band) =>
+        band.status == BandStatus.scanning ||
+        band.status == BandStatus.connecting;
+    return mid(ble.left) || mid(ble.right);
   }
 
 }
@@ -100,6 +129,11 @@ class _BandTile extends StatelessWidget {
                 ],
               ),
             ),
+            if (band.isConnected)
+              const Icon(Icons.check_circle, color: AppColors.sageDark, size: 20)
+            else
+              const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 20),
+            const SizedBox(width: 8),
             TextButton.icon(
               onPressed: band.isConnected ? onTest : null,
               icon: const Icon(Icons.vibration, size: 18),

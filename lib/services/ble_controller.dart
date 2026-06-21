@@ -22,6 +22,13 @@ class BleState {
 /// service/characteristic UUIDs — the rest of the app keeps calling the same
 /// methods.
 class BleController extends Notifier<BleState> {
+  /// Bumped every time scanAndConnect() or disconnect() is called.
+  /// A scanAndConnect() run captures the generation it started with;
+  /// if the generation has moved on by the time its delayed steps
+  /// resolve (because the user cancelled, disconnected, or started a
+  /// newer scan), it bails out instead of writing stale state.
+  int _generation = 0;
+
   @override
   BleState build() => const BleState(
         left: Wristband(wrist: Wrist.left, name: 'Left wristband'),
@@ -30,16 +37,22 @@ class BleController extends Notifier<BleState> {
 
   /// Pretend to scan + connect both bands.
   Future<void> scanAndConnect() async {
+    final myGeneration = ++_generation;
+
     state = state.copyWith(
       left: state.left.copyWith(status: BandStatus.scanning),
       right: state.right.copyWith(status: BandStatus.scanning),
     );
     await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (myGeneration != _generation) return; // cancelled/disconnected/superseded
+
     state = state.copyWith(
       left: state.left.copyWith(status: BandStatus.connecting),
       right: state.right.copyWith(status: BandStatus.connecting),
     );
     await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (myGeneration != _generation) return; // cancelled/disconnected/superseded
+
     state = state.copyWith(
       left: state.left.copyWith(status: BandStatus.connected, batteryPct: 92),
       right: state.right.copyWith(status: BandStatus.connected, batteryPct: 88),
@@ -47,6 +60,10 @@ class BleController extends Notifier<BleState> {
   }
 
   void disconnect() {
+    // Invalidate any in-flight scanAndConnect() so it can't clobber
+    // this disconnect when its delayed steps resolve later.
+    _generation++;
+
     state = state.copyWith(
       left: state.left.copyWith(status: BandStatus.disconnected),
       right: state.right.copyWith(status: BandStatus.disconnected),

@@ -7,8 +7,7 @@ import '../../models/survey.dart';
 import '../../services/assessment_controller.dart';
 import '../../widgets/pill_button.dart';
 
-/// The 6-question assessment for users who picked "I'm not sure" at sign-up.
-/// One question per page; answers feed the scoring in ProfileService.
+/// The 6-question assessment. One question per page.
 class SurveyScreen extends ConsumerStatefulWidget {
   const SurveyScreen({super.key});
 
@@ -28,104 +27,70 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
     }
   }
 
-  void _back() {
-    if (_index > 0) {
-      setState(() => _index--);
-    } else if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/register');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(assessmentControllerProvider);
     final q = kSurveyQuestions[_index];
     final selected = state.answers[_index];
     final total = kSurveyQuestions.length;
-    final isLast = _index == total - 1;
 
     return Scaffold(
-      body: SafeArea(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _CircleBackButton(onTap: _back),
-                ),
+      appBar: AppBar(
+        leading: _index == 0
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _index--),
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Question ${_index + 1} of $total',
-                        style: const TextStyle(
-                          color: AppColors.sageDark,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(q.prompt,
-                          style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 24),
-                      for (var i = 0; i < q.options.length; i++)
-                        _OptionTile(
-                          text: q.options[i].text,
-                          selected: selected == i,
-                          onTap: () => ref
-                              .read(assessmentControllerProvider.notifier)
-                              .answer(_index, i),
-                        ),
-                    ],
+        title: Text('Question ${_index + 1} of $total'),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: (_index + 1) / total,
+                    minHeight: 6,
+                    backgroundColor: AppColors.line,
+                    color: AppColors.sageDark,
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-                child: PillButton(
-                  label: isLast ? 'Finished' : 'Continue  ›',
+                const SizedBox(height: 24),
+                Text(q.prompt,
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: q.options.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, i) {
+                      final isSel = selected == i;
+                      return _OptionTile(
+                        text: q.options[i].text,
+                        selected: isSel,
+                        onTap: () => ref
+                            .read(assessmentControllerProvider.notifier)
+                            .answer(_index, i),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                PillButton(
+                  label: _index == total - 1 ? 'See my results' : 'Continue',
+                  icon: Icons.arrow_forward,
                   onPressed: selected == null ? null : _next,
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Floating circular back button (white, soft shadow) from the design.
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.card,
-      shape: const CircleBorder(),
-      elevation: 1.5,
-      shadowColor: const Color(0x22000000),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: const SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(Icons.arrow_back_ios_new,
-              size: 16, color: AppColors.ink),
         ),
       ),
     );
@@ -145,71 +110,34 @@ class _OptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.sageSoft : AppColors.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? AppColors.sageDark : AppColors.line,
-              width: selected ? 1.6 : 1,
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.sageSoft : AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? AppColors.sageDark : AppColors.line,
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_off,
+              color: selected ? AppColors.sageDark : AppColors.inkSoft,
+              size: 22,
             ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Radio(selected: selected),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: Text(text, style: const TextStyle(height: 1.35)),
-                ),
-              ),
-            ],
-          ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(text)),
+          ],
         ),
       ),
-    );
-  }
-}
-
-/// Custom radio dot matching the design's outlined circle.
-class _Radio extends StatelessWidget {
-  const _Radio({required this.selected});
-
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: selected ? AppColors.sageDark : AppColors.inkSoft,
-          width: 2,
-        ),
-      ),
-      child: selected
-          ? Center(
-              child: Container(
-                width: 11,
-                height: 11,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.sageDark,
-                ),
-              ),
-            )
-          : null,
     );
   }
 }
