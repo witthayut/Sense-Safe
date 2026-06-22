@@ -20,8 +20,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _error;
   bool _obscurePassword = true;
 
-  static const _darkNavy = Color(0xFF0D1B3E);
-  static const _textSecondary = Color(0xFF6B7280);
+  bool get _canSubmit =>
+      _username.text.trim().isNotEmpty && _password.text.isNotEmpty;
 
   @override
   void dispose() {
@@ -49,7 +49,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -62,56 +61,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 16),
 
                   // ── Title ──────────────────────────────────────────────────
-                  const Text(
+                  Text(
                     'Welcome to Haptic Drive',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: _darkNavy,
-                      letterSpacing: -0.3,
-                    ),
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     'ready for a trip?',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 15, color: _textSecondary),
+                    style: TextStyle(fontSize: 15, color: AppColors.inkSoft),
                   ),
 
                   const SizedBox(height: 28),
 
-                  // ── Wristband Illustration (from Tam branch) ──────────────
-                  const Center(child: _WristbandIllustration()),
+                  // ── Wristband Illustration ────────────────────────────────
+                  Center(
+                    child: Image.asset(
+                      'assets/images/wristbands.png',
+                      height: 180,
+                      fit: BoxFit.contain,
+                      semanticLabel:
+                          'A pair of haptic wristbands, left and right',
+                      // Falls back to the drawn illustration if the image
+                      // file is missing at assets/images/wristbands.png.
+                      errorBuilder: (context, error, stackTrace) =>
+                          const _WristbandIllustration(),
+                    ),
+                  ),
 
                   const SizedBox(height: 28),
 
-                  // ── Username Field ────────────────────────────────────────
-                  _StyledField(
+                  // ── Username Field (theme-styled) ─────────────────────────
+                  TextField(
                     controller: _username,
-                    hintText: 'Username',
-                    icon: Icons.person_outline,
                     textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      hintText: 'Username',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
                   ),
                   const SizedBox(height: 14),
 
-                  // ── Password Field ────────────────────────────────────────
-                  _StyledField(
+                  // ── Password Field (theme-styled) ─────────────────────────
+                  TextField(
                     controller: _password,
-                    hintText: 'Password',
-                    icon: Icons.lock_outline,
                     obscureText: _obscurePassword,
+                    onChanged: (_) => setState(() {}),
                     onSubmitted: (_) => _login(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: _textSecondary,
-                        size: 20,
+                    decoration: InputDecoration(
+                      hintText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.inkSoft,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
                       ),
-                      onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword),
                     ),
                   ),
 
@@ -143,7 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   PillButton(
                     label: 'Login',
                     loading: _loading,
-                    onPressed: _login,
+                    onPressed: _canSubmit ? _login : null,
                   ),
                 ],
               ),
@@ -233,51 +245,3 @@ class _WristbandPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ─── Styled Input Field (from Tam branch) ────────────────────────────────────
-
-class _StyledField extends StatelessWidget {
-  const _StyledField({
-    required this.controller,
-    required this.hintText,
-    required this.icon,
-    this.obscureText = false,
-    this.textInputAction,
-    this.onSubmitted,
-    this.suffixIcon,
-  });
-
-  final TextEditingController controller;
-  final String hintText;
-  final IconData icon;
-  final bool obscureText;
-  final TextInputAction? textInputAction;
-  final ValueChanged<String>? onSubmitted;
-  final Widget? suffixIcon;
-
-  static const _fieldBg = Color(0xFFF4F6FA);
-  static const _textSecondary = Color(0xFF6B7280);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _fieldBg,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        textInputAction: textInputAction,
-        onSubmitted: onSubmitted,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: const TextStyle(color: _textSecondary, fontSize: 15),
-          prefixIcon: Icon(icon, color: _textSecondary, size: 20),
-          suffixIcon: suffixIcon,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-      ),
-    );
-  }
-}

@@ -15,6 +15,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _email = TextEditingController();
   bool _sent = false;
 
+  bool get _isValidEmail {
+    final text = _email.text.trim();
+    return text.contains('@') && text.contains('.');
+  }
+
   @override
   void dispose() {
     _email.dispose();
@@ -41,6 +46,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 TextField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
+                  onChanged: (_) => setState(() => _sent = false),
                   decoration: const InputDecoration(
                     hintText: 'Email',
                     prefixIcon: Icon(Icons.mail_outline),
@@ -49,7 +55,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 const SizedBox(height: 20),
                 PillButton(
                   label: _sent ? 'Link sent ✓' : 'Send reset link',
-                  onPressed: () => setState(() => _sent = true),
+                  // Disabled until a (basic) email is entered.
+                  onPressed: _isValidEmail
+                      ? () => setState(() => _sent = true)
+                      : null,
                 ),
                 const SizedBox(height: 8),
                 TextButton(

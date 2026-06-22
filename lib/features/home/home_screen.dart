@@ -4,13 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../services/auth_controller.dart';
 import '../../services/ble_controller.dart';
+import '../../widgets/section_label.dart';
 
 /// "Where to today?" — wristband status, search bar, favourite destinations.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
-
-  static const _darkNavy = Color(0xFF0D1B3E);
-  static const _textSecondary = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,9 +23,12 @@ class HomeScreen extends ConsumerWidget {
     ];
 
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        children: [
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            children: [
           // ── Greeting ──────────────────────────────────────────────────────
           Text(
             'Good afternoon, $firstName',
@@ -38,14 +39,9 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Where to today?',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: _darkNavy,
-              letterSpacing: -0.5,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
 
           const SizedBox(height: 20),
@@ -61,15 +57,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 28),
 
           // ── Favourites ────────────────────────────────────────────────────
-          const Text(
-            'FAVOURITES',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: _textSecondary,
-              letterSpacing: 1.2,
-            ),
-          ),
+          const SectionLabel('Favourites'),
           const SizedBox(height: 12),
 
           for (final (name, detail, icon) in favourites)
@@ -77,7 +65,9 @@ class HomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: _FavouriteCard(name: name, detail: detail, icon: icon),
             ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -95,7 +85,7 @@ class _StatusBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F6FA),
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -132,7 +122,7 @@ class _StatusBanner extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0D1B3E),
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -142,7 +132,7 @@ class _StatusBanner extends StatelessWidget {
                       : 'Go to Devices tab to connect',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.inkSoft,
                   ),
                 ),
               ],
@@ -168,22 +158,24 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO(phase4): wire the destination search + voice input. This is a
+    // visual placeholder — the field and mic button are not yet functional.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F6FA),
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Color(0xFF9CA3AF), size: 22),
+          const Icon(Icons.search, color: AppColors.inkSoft, size: 22),
           const SizedBox(width: 10),
           const Expanded(
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Search destination',
                 hintStyle:
-                    TextStyle(color: Color(0xFF9CA3AF), fontSize: 15),
+                    TextStyle(color: AppColors.inkSoft, fontSize: 15),
                 border: InputBorder.none,
               ),
             ),
@@ -218,63 +210,58 @@ class _FavouriteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F6FA),
+    return Material(
+      color: AppColors.surfaceMuted,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        // Whole card is the tap target (≥48px high) instead of just "Go".
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.sageDark, width: 1.5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: AppColors.sageDark, size: 22),
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Route preview for "$name" — Phase 4.'),
+            backgroundColor: AppColors.sageDark,
+            duration: const Duration(seconds: 2),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0D1B3E),
-                  ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.sageDark, width: 1.5),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  detail,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF6B7280)),
+                child: Icon(icon, color: AppColors.sageDark, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detail,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.inkSoft),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Route preview for "$name" — Phase 4.'),
-                backgroundColor: AppColors.sageDark,
-                duration: const Duration(seconds: 2),
               ),
-            ),
-            child: const Text(
-              'Go',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.sageDark,
-              ),
-            ),
+              const Icon(Icons.chevron_right, color: AppColors.sageDark),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

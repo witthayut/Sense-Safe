@@ -5,14 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../services/assessment_controller.dart';
 import '../../services/auth_controller.dart';
+import '../../widgets/pill_button.dart';
+import '../../widgets/section_label.dart';
 
 /// Profile / account tab — user card, vibration profile, confirm style, logout.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
-
-  static const _darkNavy = Color(0xFF0D1B3E);
-  static const _textSecondary = Color(0xFF6B7280);
-  static const _cardBg = Color(0xFFF4F6FA);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,18 +28,16 @@ class ProfileScreen extends ConsumerWidget {
         .toUpperCase();
 
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        children: [
-          const Text(
-            'Account & Settings',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: _darkNavy,
-              letterSpacing: -0.4,
-            ),
-          ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            children: [
+              Text(
+                'Account & Settings',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
 
           const SizedBox(height: 20),
 
@@ -50,7 +46,7 @@ class ProfileScreen extends ConsumerWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: _cardBg,
+              color: AppColors.surfaceMuted,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -77,7 +73,7 @@ class ProfileScreen extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: _darkNavy,
+                          color: AppColors.ink,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -85,13 +81,13 @@ class ProfileScreen extends ConsumerWidget {
                         '@$username',
                         style: const TextStyle(
                           fontSize: 12.5,
-                          color: _textSecondary,
+                          color: AppColors.inkSoft,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: _textSecondary),
+                const Icon(Icons.chevron_right, color: AppColors.inkSoft),
               ],
             ),
           ),
@@ -99,14 +95,14 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 26),
 
           // ── Vibration Profile (from assessment) ───────────────────────────
-          const _SectionLabel(label: 'VIBRATION PROFILE'),
+          const SectionLabel('Vibration profile'),
           const SizedBox(height: 12),
 
           profile == null
               ? Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _cardBg,
+                    color: AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -115,7 +111,7 @@ class ProfileScreen extends ConsumerWidget {
                       const Text(
                         'No profile yet',
                         style: TextStyle(
-                            fontWeight: FontWeight.w600, color: _darkNavy),
+                            fontWeight: FontWeight.w600, color: AppColors.ink),
                       ),
                       const SizedBox(height: 8),
                       TextButton(
@@ -161,7 +157,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 26),
 
           // ── Confirm Style ─────────────────────────────────────────────────
-          const _SectionLabel(label: 'CONFIRM STYLE'),
+          const SectionLabel('Confirm style'),
           const SizedBox(height: 12),
           const _SettingsGroup(
             rows: [
@@ -185,42 +181,23 @@ class ProfileScreen extends ConsumerWidget {
 
           const SizedBox(height: 32),
 
-          OutlinedButton.icon(
+          PillButton(
+            label: 'Log out',
+            icon: Icons.logout,
+            filled: false,
             onPressed: () {
               ref.read(authControllerProvider.notifier).logout();
               context.go('/login');
             },
-            icon: const Icon(Icons.logout),
-            label: const Text('Log out'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-            ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-// ─── Section Label ────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF6B7280),
-        letterSpacing: 1.2,
-      ),
-    );
-  }
-}
 
 // ─── Settings Group ───────────────────────────────────────────────────────────
 
@@ -245,7 +222,7 @@ class _SettingsGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F6FA),
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -267,7 +244,7 @@ class _SettingsGroup extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0D1B3E),
+                          color: AppColors.ink,
                         ),
                       ),
                     ),
@@ -275,16 +252,16 @@ class _SettingsGroup extends StatelessWidget {
                       row.value,
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF6B7280),
+                        color: AppColors.inkSoft,
                       ),
                     ),
                   ],
                 ),
               ),
               if (!isLast)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(height: 1, color: Colors.grey.shade300),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(height: 1, color: AppColors.line),
                 ),
             ],
           );

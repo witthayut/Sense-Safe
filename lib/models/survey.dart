@@ -4,6 +4,7 @@
 /// to 1.0 (high difficulty / needs the most haptic support), plus the
 /// [dimension] it contributes to. The scoring logic in
 /// `profile_service.dart` turns these into a VibrationProfile.
+library;
 
 enum ProfileDimension {
   leftRight, // telling left from right

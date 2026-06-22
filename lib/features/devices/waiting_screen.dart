@@ -39,20 +39,28 @@ class WaitingScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 36),
-            const _PairedBandsIllustration(),
+            Image.asset(
+              'assets/images/wristbands.png',
+              height: 150,
+              fit: BoxFit.contain,
+              semanticLabel: 'A pair of haptic wristbands, left and right',
+              // Falls back to the drawn illustration if the image is missing.
+              errorBuilder: (context, error, stackTrace) =>
+                  const _PairedBandsIllustration(),
+            ),
             const SizedBox(height: 36),
 
-            Text(
+            const Text(
               'Waiting for wristbands to connect...',
-              style: const TextStyle(color: AppColors.inkSoft),
+              style: TextStyle(color: AppColors.inkSoft),
             ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   'Scanning for available devices...',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.inkSoft,
                     fontSize: 13,
                   ),
@@ -119,7 +127,7 @@ class _PairedBandsPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2;
     final wavePaint = Paint()
-      ..color = AppColors.sage.withOpacity(0.6)
+      ..color = AppColors.sage.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 

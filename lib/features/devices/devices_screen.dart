@@ -5,14 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../models/wristband.dart';
 import '../../services/ble_controller.dart';
+import '../../widgets/band_tile.dart';
+import '../../widgets/pill_button.dart';
 import 'waiting_screen.dart';
 
-/// Devices tab — pairing status + test vibration for both wristbands.
+/// Devices tab — BLE status for both wristbands + a quick test pulse.
 ///
-/// Three states map directly to the Figma frames:
-///  - devices1 (idle/disconnected) → tile list + "Connect" button
+/// Three states map to the Figma frames:
+///  - disconnected → tile list (red status) + "Connect"
 ///  - waiting (scanning/connecting) → [WaitingScreen]
-///  - devices2 (connected)         → tile list + "Disconnect" button
+///  - connected → "paired & connected" banner + tile list (green status,
+///    battery/signal) + "Disconnect"
 class DevicesScreen extends ConsumerWidget {
   const DevicesScreen({super.key});
 
@@ -21,126 +24,87 @@ class DevicesScreen extends ConsumerWidget {
     final ble = ref.watch(bleControllerProvider);
     final notifier = ref.read(bleControllerProvider.notifier);
 
-    final isConnecting = _isMidConnection(ble);
-
-    if (isConnecting) {
-      return WaitingScreen(
-        onCancel: notifier.disconnect,
-      );
+    if (_isMidConnection(ble)) {
+      return WaitingScreen(onCancel: notifier.disconnect);
     }
 
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        children: [
-          Text('Devices', style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 4),
-          Text(
-            ble.bothConnected
-                ? 'Both wristbands paired & connected'
-                : 'BLE status for both wristbands and a quick test pulse.',
-            style: const TextStyle(color: AppColors.inkSoft),
-          ),
-          const SizedBox(height: 20),
-          _BandTile(
-            band: ble.left,
-            onTest: () => context.push('/calibrate/left'),
-          ),
-          const SizedBox(height: 12),
-          _BandTile(
-            band: ble.right,
-            onTest: () => context.push('/calibrate/right'),
-          ),
-          const SizedBox(height: 24),
-          if (!ble.bothConnected)
-            FilledButton.icon(
-              onPressed: notifier.scanAndConnect,
-              icon: const Icon(Icons.bluetooth_searching),
-              label: const Text('Connect'),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.sageDark,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(26),
-                ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            children: [
+              Text('Devices',
+                  style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 4),
+              const Text(
+                'BLE status for both wristbands and a quick test pulse.',
+                style: TextStyle(color: AppColors.inkSoft),
               ),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: notifier.disconnect,
-              icon: const Icon(Icons.bluetooth_disabled),
-              label: const Text('Disconnect'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(26),
-                ),
+              const SizedBox(height: 16),
+              if (ble.bothConnected) ...[
+                const _ConnectedBanner(),
+                const SizedBox(height: 16),
+              ],
+              BandTile(
+                band: ble.left,
+                onTest: () => context.push('/calibrate/left'),
               ),
-            ),
-        ],
+              const SizedBox(height: 14),
+              BandTile(
+                band: ble.right,
+                onTest: () => context.push('/calibrate/right'),
+              ),
+              const SizedBox(height: 28),
+              if (!ble.bothConnected)
+                PillButton(
+                  label: 'Connect',
+                  icon: Icons.bluetooth_searching,
+                  onPressed: notifier.scanAndConnect,
+                )
+              else
+                PillButton(
+                  label: 'Disconnect',
+                  icon: Icons.bluetooth_disabled,
+                  filled: false,
+                  onPressed: notifier.disconnect,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  /// True while either band is actively scanning or connecting —
-  /// this is the moment the Figma "waiting" frame should be shown.
+  /// True while either band is actively scanning or connecting.
   bool _isMidConnection(BleState ble) {
-    bool mid(Wristband band) =>
-        band.status == BandStatus.scanning ||
-        band.status == BandStatus.connecting;
+    bool mid(Wristband b) =>
+        b.status == BandStatus.scanning || b.status == BandStatus.connecting;
     return mid(ble.left) || mid(ble.right);
   }
-
 }
 
-class _BandTile extends StatelessWidget {
-  const _BandTile({required this.band, required this.onTest});
-
-  final Wristband band;
-  final VoidCallback onTest;
+/// Green "Both wristbands paired & connected" banner shown when connected.
+class _ConnectedBanner extends StatelessWidget {
+  const _ConnectedBanner();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              band.isConnected ? Icons.watch : Icons.watch_outlined,
-              size: 32,
-              color: band.isConnected ? AppColors.sageDark : AppColors.inkSoft,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${band.sideLabel} wristband',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text(
-                    band.isConnected
-                        ? 'Battery ${band.batteryPct ?? '--'}% · signal strong'
-                        : 'Not connected',
-                    style: const TextStyle(
-                        color: AppColors.inkSoft, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            if (band.isConnected)
-              const Icon(Icons.check_circle, color: AppColors.sageDark, size: 20)
-            else
-              const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 20),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: band.isConnected ? onTest : null,
-              icon: const Icon(Icons.vibration, size: 18),
-              label: const Text('Test'),
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.sageSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.bluetooth_connected, color: AppColors.sageDark, size: 18),
+          SizedBox(width: 10),
+          Text('Both wristbands paired & connected',
+              style: TextStyle(
+                  color: AppColors.sageDark, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

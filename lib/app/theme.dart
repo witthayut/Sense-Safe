@@ -15,6 +15,7 @@ class AppColors {
   static const Color surfaceMuted = Color(0xFFEDEFF1); // inset controls (pulse buttons)
   static const Color warn = Color(0xFFE08A4B);
   static const Color danger = Color(0xFFD45D5D);
+  static const Color sand = Color(0xFFF0E8D6); // warm "Test Vibration" button
 
   // Accent colours for the results "spatial profile" bars (one per dimension).
   static const Color chartBlue = Color(0xFF3E7CB1);
@@ -69,17 +70,33 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.sageDark, width: 1.6),
         ),
       ),
+      // One shared type scale so every screen pulls heading/title/label
+      // styles from here instead of hardcoding font sizes.
       textTheme: const TextTheme(
         headlineMedium: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w800,
+          color: AppColors.ink,
+          letterSpacing: -0.3,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 20,
           fontWeight: FontWeight.w700,
           color: AppColors.ink,
         ),
-        titleLarge: TextStyle(
+        titleMedium: TextStyle(
+          fontSize: 15,
           fontWeight: FontWeight.w700,
           color: AppColors.ink,
         ),
         bodyMedium: TextStyle(color: AppColors.ink),
         bodySmall: TextStyle(color: AppColors.inkSoft),
+        labelSmall: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.inkSoft,
+          letterSpacing: 1.1,
+        ),
       ),
     );
   }

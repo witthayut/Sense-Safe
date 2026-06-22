@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../models/survey.dart';
 import '../../models/vibration_profile.dart';
 import '../../services/assessment_controller.dart';
+import '../../widgets/pill_button.dart';
 
 /// "Your results" — the vibration profile, shown as confidence bars.
 class ResultsScreen extends ConsumerWidget {
@@ -63,25 +64,14 @@ class ResultsScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 const Text(
                   'Not a diagnosis — just your starting vibration profile. '
-                  'You can fine-tune everything in Settings.',
+                  'You can fine-tune it later.',
                   style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/onboarding'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.sageDark,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                    ),
-                    child: const Text('Use this profile',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
+                PillButton(
+                  label: 'Use this profile',
+                  icon: Icons.arrow_forward,
+                  onPressed: () => context.go('/onboarding'),
                 ),
                 const SizedBox(height: 8),
                 TextButton(
