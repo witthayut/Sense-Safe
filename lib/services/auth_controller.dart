@@ -1,62 +1,134 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/app_user.dart';
 import '../models/learning_difference.dart';
 
-/// Mock authentication for Phase 1.
-///
-/// Holds the current user in memory. Any non-empty username + password
-/// "works". Swap the body of [login]/[register] for Firebase Auth in
-/// Phase 1.5 without changing the UI.
+/// Real authentication backed by Firebase Auth (email/password) with the
+/// user's profile stored in Firestore at `users/{uid}`.
 class AuthController extends Notifier<AppUser?> {
-  int _seq = 0;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
+  StreamSubscription<User?>? _sub;
 
   @override
-  AppUser? build() => null;
+  AppUser? build() {
+    try {
+      _sub = _auth.authStateChanges().listen(_onAuthChanged);
+      ref.onDispose(() => _sub?.cancel());
+      final current = _auth.currentUser;
+      if (current != null) _onAuthChanged(current);
+    } catch (_) {
+      // Firebase not initialized (e.g. widget tests) — stay signed out.
+    }
+    return null;
+  }
 
   bool get isSignedIn => state != null;
 
-  Future<String?> login(String username, String password) async {
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    if (username.trim().isEmpty || password.isEmpty) {
-      return 'Please enter a username and password.';
+  Future<void> _onAuthChanged(User? user) async {
+    if (user == null) {
+      state = null;
+      return;
+    }
+    Map<String, dynamic>? data;
+    try {
+      data = (await _db.collection('users').doc(user.uid).get()).data();
+    } catch (_) {
+      data = null; // offline / rules — fall back to Auth fields
     }
     state = AppUser(
-      id: 'u${_seq++}',
-      fullName: username,
-      username: username.trim(),
+      id: user.uid,
+      email: user.email ?? '',
+      fullName: (data?['fullName'] as String?) ?? user.displayName ?? '',
+      learningDifferences:
+          AppUser.parseLearningDifferences(data?['learningDifferences']),
     );
-    return null; // null == success
+  }
+
+  /// Returns null on success, or a user-friendly error message.
+  Future<String?> login(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return _friendly(e);
+    } catch (_) {
+      return 'Something went wrong. Please try again.';
+    }
   }
 
   Future<String?> register({
     required String fullName,
-    required String username,
+    required String email,
     required String password,
     required Set<LearningDifference> learningDifferences,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    if (fullName.trim().isEmpty ||
-        username.trim().isEmpty ||
-        password.isEmpty) {
-      return 'Please fill in every field.';
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = cred.user!;
+      await user.updateDisplayName(fullName.trim());
+
+      final appUser = AppUser(
+        id: user.uid,
+        email: email.trim(),
+        fullName: fullName.trim(),
+        learningDifferences: learningDifferences,
+      );
+      await _db
+          .collection('users')
+          .doc(user.uid)
+          .set(appUser.toFirestore(), SetOptions(merge: true));
+      state = appUser;
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return _friendly(e);
+    } catch (_) {
+      return 'Something went wrong creating your account.';
     }
-    state = AppUser(
-      id: 'u${_seq++}',
-      fullName: fullName.trim(),
-      username: username.trim(),
-      learningDifferences: learningDifferences,
-    );
-    return null;
   }
 
-  void updateLearningDifferences(Set<LearningDifference> diffs) {
+  Future<void> updateLearningDifferences(Set<LearningDifference> diffs) async {
     final user = state;
     if (user == null) return;
     state = user.copyWith(learningDifferences: diffs);
+    await _db.collection('users').doc(user.id).set(
+      {'learningDifferences': diffs.map((d) => d.name).toList()},
+      SetOptions(merge: true),
+    );
   }
 
-  void logout() => state = null;
+  Future<void> logout() => _auth.signOut();
+
+  String _friendly(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-email':
+        return 'That email address looks invalid.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Wrong email or password.';
+      case 'email-already-in-use':
+        return 'That email is already registered. Try logging in.';
+      case 'weak-password':
+        return 'Password should be at least 6 characters.';
+      case 'network-request-failed':
+        return 'Network error — check your connection.';
+      default:
+        return e.message ?? 'Authentication failed.';
+    }
+  }
 }
 
 final authControllerProvider =

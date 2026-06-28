@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "314523160981",
+    "project_id": "senseandsafe-8a030",
+    "storage_bucket": "senseandsafe-8a030.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:314523160981:android:181a2870ff19adfe44e69c",
+        "android_client_info": {
+          "package_name": "com.example.haptic_drive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsmPE4c_YA7Tgyvxbujjxa8HoMHB7ZAwg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

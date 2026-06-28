@@ -1,8 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Needed for the Directions API HTTP calls. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Current-location origin for routing. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="haptic_drive"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- Google Maps SDK for Android key.
+             Replace YOUR_GOOGLE_MAPS_API_KEY with your Android Maps key. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBIUpO5Wc_gIEZjcpGg9Ep-IkmDhmhLsvg"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

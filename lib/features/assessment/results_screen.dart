@@ -9,8 +9,15 @@ import '../../services/assessment_controller.dart';
 import '../../widgets/pill_button.dart';
 
 /// "Your results" — the vibration profile, shown as confidence bars.
+///
+/// [viewOnly] = true when a returning user just wants to *see* their saved
+/// profile (opened from Profile). In that mode there's no "Use this profile →
+/// connect devices" step — only a Done button. When false (right after taking
+/// the survey) the CTA continues into onboarding.
 class ResultsScreen extends ConsumerWidget {
-  const ResultsScreen({super.key});
+  const ResultsScreen({super.key, this.viewOnly = false});
+
+  final bool viewOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,11 +75,23 @@ class ResultsScreen extends ConsumerWidget {
                   style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
                 ),
                 const SizedBox(height: 24),
-                PillButton(
-                  label: 'Use this profile',
-                  icon: Icons.arrow_forward,
-                  onPressed: () => context.go('/onboarding'),
-                ),
+                if (viewOnly)
+                  PillButton(
+                    label: 'Done',
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/home');
+                      }
+                    },
+                  )
+                else
+                  PillButton(
+                    label: 'Use this profile',
+                    icon: Icons.arrow_forward,
+                    onPressed: () => context.go('/onboarding'),
+                  ),
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () {

@@ -20,6 +20,16 @@ dependencies:
   # Local persistence (Phase 1)
   shared_preferences: ^2.3.2
 
+  # Maps + routing (Phase 4 — Google Maps)
+  google_maps_flutter: ^2.9.0
+  http: ^1.2.2
+  geolocator: ^13.0.1
+
+  # Backend (Phase 1.5 — Firebase)
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
   # --- Added in later phases (kept here as a reference; uncomment when wiring up) ---
   # flutter_blue_plus: ^1.32.12        # Phase 3 — real wristband BLE
   # mapbox_maps_flutter: ^2.3.0        # Phase 4 — map + navigation

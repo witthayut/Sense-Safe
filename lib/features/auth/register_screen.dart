@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../models/learning_difference.dart';
+import '../../services/assessment_controller.dart';
 import '../../services/auth_controller.dart';
 import '../../widgets/pill_button.dart';
 import '../../widgets/section_label.dart';
@@ -17,7 +18,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _fullName = TextEditingController();
-  final _username = TextEditingController();
+  final _email = TextEditingController();
   final _password = TextEditingController();
   final Set<LearningDifference> _selected = {};
   bool _loading = false;
@@ -26,13 +27,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   bool get _canSubmit =>
       _fullName.text.trim().isNotEmpty &&
-      _username.text.trim().isNotEmpty &&
+      _email.text.trim().isNotEmpty &&
       _password.text.isNotEmpty;
 
   @override
   void dispose() {
     _fullName.dispose();
-    _username.dispose();
+    _email.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -44,7 +45,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
     final err = await ref.read(authControllerProvider.notifier).register(
           fullName: _fullName.text,
-          username: _username.text,
+          email: _email.text,
           password: _password.text,
           learningDifferences: _selected,
         );
@@ -55,10 +56,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
     if (err != null) return;
 
-    // "Not sure" → take the survey; otherwise head to device onboarding.
+    // "Not sure" → take the survey to discover a profile.
+    // Knows their type → build the profile straight from it (no survey).
     if (_selected.contains(LearningDifference.notSure) || _selected.isEmpty) {
       context.go('/survey');
     } else {
+      ref
+          .read(assessmentControllerProvider.notifier)
+          .applyFromLearningDifferences(_selected);
       context.go('/onboarding');
     }
   }
@@ -129,12 +134,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: 14),
                   TextField(
-                    controller: _username,
+                    controller: _email,
                     textInputAction: TextInputAction.next,
+                    keyboardType: TextInputType.emailAddress,
                     onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
-                      hintText: 'Username',
-                      prefixIcon: Icon(Icons.alternate_email),
+                      hintText: 'Email',
+                      prefixIcon: Icon(Icons.mail_outline),
                     ),
                   ),
                   const SizedBox(height: 14),

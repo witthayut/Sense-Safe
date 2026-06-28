@@ -49,6 +49,36 @@ class VibrationProfile {
 
   /// Support-need as a percentage 0..100.
   int supportPctFor(ProfileDimension d) => (scoreFor(d) * 100).round();
+
+  /// Serialize for Firestore (enum keys/values stored as their `.name`).
+  Map<String, dynamic> toFirestore() => {
+        'scores': {for (final e in scores.entries) e.key.name: e.value},
+        'intensity': intensity,
+        'leadTimeSeconds': leadTimeSeconds,
+        'rhythm': rhythm.name,
+        'spatialType': spatialType,
+      };
+
+  static VibrationProfile? fromFirestore(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final rawScores = (data['scores'] as Map?) ?? const {};
+    final scores = <ProfileDimension, double>{};
+    for (final d in ProfileDimension.values) {
+      final v = rawScores[d.name];
+      if (v is num) scores[d] = v.toDouble();
+    }
+    final rhythm = HapticRhythm.values.firstWhere(
+      (r) => r.name == data['rhythm'],
+      orElse: () => HapticRhythm.medium,
+    );
+    return VibrationProfile(
+      scores: scores,
+      intensity: (data['intensity'] as num?)?.toDouble() ?? 0.0,
+      leadTimeSeconds: (data['leadTimeSeconds'] as num?)?.toInt() ?? 3,
+      rhythm: rhythm,
+      spatialType: data['spatialType'] as String? ?? 'Balanced profile',
+    );
+  }
 }
 
 extension ProfileDimensionLabel on ProfileDimension {

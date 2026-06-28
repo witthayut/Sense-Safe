@@ -18,7 +18,7 @@ class ProfileScreen extends ConsumerWidget {
     final profile = ref.watch(assessmentControllerProvider).profile;
 
     final name = user?.fullName ?? 'Guest';
-    final username = user?.username ?? 'guest';
+    final email = user?.email ?? '';
     final initials = name
         .split(' ')
         .where((p) => p.isNotEmpty)
@@ -78,7 +78,7 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '@$username',
+                        email,
                         style: const TextStyle(
                           fontSize: 12.5,
                           color: AppColors.inkSoft,
@@ -149,7 +149,7 @@ class ProfileScreen extends ConsumerWidget {
           if (profile != null) ...[
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => context.go('/results'),
+              onPressed: () => context.push('/results?view=true'),
               child: const Text('View full results'),
             ),
           ],

@@ -1,3 +1,4 @@
+import '../models/learning_difference.dart';
 import '../models/survey.dart';
 import '../models/vibration_profile.dart';
 
@@ -36,6 +37,44 @@ class ProfileService {
 
     final intensity = (0.35 + overall * 0.5).clamp(0.0, 1.0);
     final leadTime = (3 + (overall * 5)).round(); // 3..8 seconds
+    final rhythm = overall > 0.66
+        ? HapticRhythm.sharp
+        : (overall > 0.33 ? HapticRhythm.medium : HapticRhythm.soft);
+
+    return VibrationProfile(
+      scores: scores,
+      intensity: intensity,
+      leadTimeSeconds: leadTime,
+      rhythm: rhythm,
+      spatialType: _classify(scores),
+    );
+  }
+
+  /// Builds a profile directly from a user's self-declared learning
+  /// difference(s) — for people who already know their type and skip the
+  /// 6-question survey. Each difference maps to its dominant dimension.
+  VibrationProfile profileFromLearningDifferences(
+      Set<LearningDifference> diffs) {
+    const dimensionFor = {
+      LearningDifference.dyspraxia: ProfileDimension.leftRight,
+      LearningDifference.dyscalculia: ProfileDimension.distance,
+      LearningDifference.dyslexia: ProfileDimension.signReading,
+      LearningDifference.adhd: ProfileDimension.attention,
+    };
+
+    // Baseline mild support everywhere; raise the dimensions they picked.
+    final scores = <ProfileDimension, double>{
+      for (final d in ProfileDimension.values) d: 0.2,
+    };
+    for (final ld in diffs) {
+      final dim = dimensionFor[ld];
+      if (dim != null) scores[dim] = 0.85;
+    }
+
+    final overall =
+        scores.values.reduce((a, b) => a + b) / scores.length;
+    final intensity = (0.35 + overall * 0.5).clamp(0.0, 1.0);
+    final leadTime = (3 + (overall * 5)).round();
     final rhythm = overall > 0.66
         ? HapticRhythm.sharp
         : (overall > 0.33 ? HapticRhythm.medium : HapticRhythm.soft);

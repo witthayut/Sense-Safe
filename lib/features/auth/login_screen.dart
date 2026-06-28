@@ -14,18 +14,18 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _username = TextEditingController();
+  final _email = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
   String? _error;
   bool _obscurePassword = true;
 
   bool get _canSubmit =>
-      _username.text.trim().isNotEmpty && _password.text.isNotEmpty;
+      _email.text.trim().isNotEmpty && _password.text.isNotEmpty;
 
   @override
   void dispose() {
-    _username.dispose();
+    _email.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -37,7 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     final err = await ref
         .read(authControllerProvider.notifier)
-        .login(_username.text, _password.text);
+        .login(_email.text, _password.text);
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -92,14 +92,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   const SizedBox(height: 28),
 
-                  // ── Username Field (theme-styled) ─────────────────────────
+                  // ── Email Field (theme-styled) ────────────────────────────
                   TextField(
-                    controller: _username,
+                    controller: _email,
                     textInputAction: TextInputAction.next,
+                    keyboardType: TextInputType.emailAddress,
                     onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
-                      hintText: 'Username',
-                      prefixIcon: Icon(Icons.person_outline),
+                      hintText: 'Email',
+                      prefixIcon: Icon(Icons.mail_outline),
                     ),
                   ),
                   const SizedBox(height: 14),

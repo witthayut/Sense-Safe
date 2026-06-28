@@ -1,39 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_navigation.dart';
 import '../devices/devices_screen.dart';
+import '../routes/route_screen.dart';
 import 'home_screen.dart';
-import 'placeholder_tab.dart';
 import 'profile_screen.dart';
 
-/// Bottom-nav shell holding the four main tabs from the mockups.
-class HomeShell extends StatefulWidget {
+/// Bottom-nav shell holding the four main tabs. The selected tab lives in
+/// [homeTabProvider] so screens like Home can switch to Routes programmatically.
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
-
-  @override
-  State<HomeShell> createState() => _HomeShellState();
-}
-
-class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
 
   static const _tabs = [
     HomeScreen(),
     DevicesScreen(),
-    PlaceholderTab(
-      title: 'Routes',
-      icon: Icons.route_outlined,
-      message: 'Saved routes & route picker arrive in Phase 4.',
-    ),
+    RouteScreen(),
     ProfileScreen(),
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = ref.watch(homeTabProvider);
     return Scaffold(
-      body: IndexedStack(index: _index, children: _tabs),
+      body: IndexedStack(index: index, children: _tabs),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        selectedIndex: index,
+        onDestinationSelected: (i) =>
+            ref.read(homeTabProvider.notifier).state = i,
         destinations: const [
           NavigationDestination(
               icon: Icon(Icons.home_outlined),

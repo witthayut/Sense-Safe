@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/wristband.dart';
+import 'auth_controller.dart';
 
 class BleState {
   const BleState({required this.left, required this.right});
@@ -28,12 +29,28 @@ class BleController extends Notifier<BleState> {
   /// resolve (because the user cancelled, disconnected, or started a
   /// newer scan), it bails out instead of writing stale state.
   int _generation = 0;
+  String? _lastUid;
+
+  static const _initial = BleState(
+    left: Wristband(wrist: Wrist.left, name: 'Left wristband'),
+    right: Wristband(wrist: Wrist.right, name: 'Right wristband'),
+  );
 
   @override
-  BleState build() => const BleState(
-        left: Wristband(wrist: Wrist.left, name: 'Left wristband'),
-        right: Wristband(wrist: Wrist.right, name: 'Right wristband'),
-      );
+  BleState build() {
+    // Reset the (mock) connection whenever the signed-in user changes, so
+    // every account starts onboarding with the bands disconnected.
+    ref.listen<dynamic>(authControllerProvider, (prev, next) {
+      final uid = next?.id as String?;
+      if (uid != _lastUid) {
+        _lastUid = uid;
+        _generation++; // cancel any in-flight scan
+        state = _initial;
+      }
+    });
+    _lastUid = ref.read(authControllerProvider)?.id;
+    return _initial;
+  }
 
   /// Pretend to scan + connect both bands.
   Future<void> scanAndConnect() async {

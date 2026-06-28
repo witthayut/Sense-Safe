@@ -24,8 +24,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       const authRoutes = {'/login', '/register', '/forgot'};
       final onAuthRoute = authRoutes.contains(loc);
 
+      // Not signed in → only auth screens are allowed.
       if (!signedIn && !onAuthRoute) return '/login';
-      if (signedIn && onAuthRoute) return '/home';
+      // Signed in → only bounce away from /login (so returning users land on
+      // home). Register intentionally continues to /survey or /onboarding, so
+      // we must NOT redirect it to /home here.
+      if (signedIn && loc == '/login') return '/home';
       return null;
     },
     refreshListenable: _AuthListenable(ref),
@@ -35,7 +39,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/forgot', builder: (c, s) => const ForgotPasswordScreen()),
       GoRoute(path: '/onboarding', builder: (c, s) => const WelcomeScreen()),
       GoRoute(path: '/survey', builder: (c, s) => const SurveyScreen()),
-      GoRoute(path: '/results', builder: (c, s) => const ResultsScreen()),
+      GoRoute(
+        path: '/results',
+        builder: (c, s) =>
+            ResultsScreen(viewOnly: s.uri.queryParameters['view'] == 'true'),
+      ),
       GoRoute(
         path: '/calibrate/:wrist',
         builder: (c, s) {
