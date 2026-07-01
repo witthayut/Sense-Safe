@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app_navigation.dart';
+import '../assistant/ai_assistant_overlay.dart';
 import '../devices/devices_screen.dart';
 import '../routes/route_screen.dart';
 import 'home_screen.dart';
@@ -9,6 +10,7 @@ import 'profile_screen.dart';
 
 /// Bottom-nav shell holding the four main tabs. The selected tab lives in
 /// [homeTabProvider] so screens like Home can switch to Routes programmatically.
+/// [AiAssistantOverlay] floats on top of every tab via the Stack.
 class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
 
@@ -23,7 +25,15 @@ class HomeShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(homeTabProvider);
     return Scaffold(
-      body: IndexedStack(index: index, children: _tabs),
+      body: Stack(
+        children: [
+          // ── Main tab content ──────────────────────────────────────
+          IndexedStack(index: index, children: _tabs),
+
+          // ── Floating AI assistant (always on top of every tab) ────
+          const AiAssistantOverlay(),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) =>
