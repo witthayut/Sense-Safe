@@ -3,6 +3,10 @@
 This file is read automatically by Claude Code at the start of each session.
 It captures the decisions and current state so you don't have to re-explain.
 
+> 📌 **Read `CONTEXT.md` first** — it's the living status/handoff doc (what's
+> done, what's next, external services, gotchas). This file covers the longer-term
+> decisions & architecture.
+
 ## What this project is
 
 A Flutter app that delivers turn-by-turn driving navigation as **wrist
