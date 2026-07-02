@@ -28,6 +28,11 @@ dyspraxia). A 6-question assessment builds a personal **vibration profile**
   **LD-friendly / fastest / fewest-turns**, fullscreen map, hr+min durations.
 - ✅ Home search + favourites now open the Routes tab and route there.
 - ✅ Committed to `main` (private repo `github.com/witthayut/Sense-Safe`).
+- ⏸️ **Gemini AI assistant** (teammate `Tam`'s feature) — merged into `main`,
+  lint-clean, tested. Floating chat button on every tab
+  (`ai_assistant_overlay.dart` + `assistant_controller.dart`), backed by
+  `gemini_service.dart` (Gemini 2.0 Flash REST). **Not activated** — see
+  "Gemini API" below.
 
 ## NEXT (in priority order)
 1. **Haptic Engine** (Phase 4 core) ⭐ — "Start drive" follows the chosen route
@@ -46,6 +51,9 @@ dyspraxia). A 6-question assessment builds a personal **vibration profile**
 - Home **favourites** are hardcoded labels; tapping routes by the label name.
 - **"Start drive & Dashcam"** button = stub (waits for the Haptic Engine).
 - Forgot-password = stub.
+- **Gemini AI assistant** is merged but has no working API key wired in yet
+  (waits on a billing decision — see "Gemini API" below). Without a key it
+  fails gracefully: shows "API key not configured" in the chat.
 
 ## External services / accounts
 - **Firebase project**: `senseandsafe-8a030` (display "SenseAndSafe"). Auth =
@@ -68,6 +76,24 @@ dyspraxia). A 6-question assessment builds a personal **vibration profile**
   - TODO before public launch: split into per-platform keys with
     HTTP-referrer (web) + Android-app/SHA-1 restrictions. (One key can only have
     ONE application-restriction type, which is why we left it as None for now.)
+- **Gemini API** (for the AI assistant, `gemini_service.dart`): key is passed
+  via `--dart-define=GEMINI_API_KEY=...`, never committed to source — good
+  practice, but not yet wired into `/start-system` because there's no working
+  key. **Confirmed the free tier is unavailable on this Google account** (two
+  separate keys, including a fresh non-default project, both returned
+  `429 RESOURCE_EXHAUSTED — limit: 0` on `generateContent`; likely a
+  region/eligibility restriction, not a key or project misconfiguration).
+  CORS itself is **not** a blocker — verified Google's endpoint sends proper
+  `Access-Control-Allow-Origin` headers on both preflight and the real
+  response, so a browser call would work fine once quota exists. **Decision
+  (2026-07-02): hold off** rather than enable billing — revisit later if the
+  assistant becomes a priority. Before activating: enable billing on the
+  Gemini project + set a small budget alert (same pattern as the Maps key),
+  then wire the key into `/start-system` and re-test end-to-end on web.
+  Before public launch, also consider proxying calls through a Firebase
+  Cloud Function so the key never ships in the compiled web JS (same
+  exposure risk as the Maps key, but Gemini keys can't be domain/API
+  restricted the same way, so it's a bigger blank check if leaked).
 
 ## Dev workflow
 - Run with the **`/start-system`** skill → serves Flutter **web** on **port 8090**
@@ -115,5 +141,6 @@ dyspraxia). A 6-question assessment builds a personal **vibration profile**
 
 ## Git
 - Repo: `github.com/witthayut/Sense-Safe` (**private**). Default branch **main**
-  has all current work. Teammate branch `Tam` exists (frontend, already ported).
-  Feature branches are merged via fast-forward into main.
+  has all current work, including teammate `Tam`'s frontend redesign (ported
+  earlier) and Gemini assistant feature (merged 2026-07-02). Feature branches
+  are merged via fast-forward/merge into main.
