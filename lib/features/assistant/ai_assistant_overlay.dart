@@ -77,7 +77,7 @@ class _FloatingAiButton extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppColors.sageDark.withOpacity(0.35),
+              color: AppColors.sageDark.withValues(alpha: 0.35),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -213,10 +213,10 @@ class _ChatPopupState extends State<_ChatPopup> {
             // ── Input ───────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.background,
                 borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(20)),
+                    BorderRadius.vertical(bottom: Radius.circular(20)),
                 border: Border(
                   top: BorderSide(color: AppColors.line),
                 ),
@@ -323,7 +323,7 @@ class _TypingIndicator extends StatelessWidget {
           color: AppColors.sageSoft,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _Dot(delay: 0),
@@ -376,7 +376,7 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
         width: 6,
         height: 6 + _anim.value * 4,
         decoration: BoxDecoration(
-          color: AppColors.sageDark.withOpacity(0.6 + _anim.value * 0.4),
+          color: AppColors.sageDark.withValues(alpha: 0.6 + _anim.value * 0.4),
           borderRadius: BorderRadius.circular(4),
         ),
       ),
@@ -391,16 +391,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.auto_awesome,
                 color: AppColors.sage, size: 32),
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               'Ask me anything about\nSense&Safe or Learning Disabilities',
               textAlign: TextAlign.center,
               style: TextStyle(
