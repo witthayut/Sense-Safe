@@ -1,5 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../models/route_maneuver.dart';
+
 /// Thrown when routes can't be computed; [message] is user-friendly.
 class DirectionsException implements Exception {
   const DirectionsException(this.message);
@@ -20,6 +22,7 @@ class RawRoute {
     required this.destination,
     required this.startAddress,
     required this.endAddress,
+    this.maneuvers = const [],
   });
 
   final List<LatLng> points;
@@ -30,7 +33,16 @@ class RawRoute {
   final LatLng destination;
   final String startAddress;
   final String endAddress;
+  final List<RouteManeuver> maneuvers;
 }
+
+/// Strips HTML tags/entities from a Directions instruction so it can be shown
+/// as plain text ("Turn <b>left</b>&nbsp;onto X" → "Turn left onto X").
+String stripHtml(String html) => html
+    .replaceAll(RegExp(r'<[^>]*>'), '')
+    .replaceAll('&nbsp;', ' ')
+    .replaceAll('&amp;', '&')
+    .trim();
 
 /// Decodes a Google "encoded polyline" into lat/lng points (used by the HTTP
 /// fetcher; the web JS API returns geometry already decoded).

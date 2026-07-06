@@ -2,6 +2,7 @@ import 'dart:js_interop';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../models/route_maneuver.dart';
 import 'directions_common.dart';
 
 /// Web fetch: call the in-page `google.maps.DirectionsService` (loaded via the
@@ -45,8 +46,18 @@ Future<List<RawRoute>> fetchRawRoutes({
 
 RawRoute _toRaw(_DirRoute r) {
   final leg = r.legs.toDart.first;
-  final turns =
-      leg.steps.toDart.where((s) => s.maneuver != null).length;
+  final maneuvers = <RouteManeuver>[
+    for (final s in leg.steps.toDart)
+      if ((s.maneuver?.toDart ?? '').isNotEmpty)
+        RouteManeuver(
+          googleType: s.maneuver!.toDart,
+          position: LatLng(
+            s.startLocation.lat().toDartDouble,
+            s.startLocation.lng().toDartDouble,
+          ),
+          instruction: stripHtml(s.instructions?.toDart ?? ''),
+        ),
+  ];
   final points = [
     for (final p in r.overviewPath.toDart)
       LatLng(p.lat().toDartDouble, p.lng().toDartDouble),
@@ -55,13 +66,14 @@ RawRoute _toRaw(_DirRoute r) {
     points: points,
     durationSec: leg.duration.value.toDartInt,
     distanceM: leg.distance.value.toDartInt,
-    turns: turns,
+    turns: maneuvers.length,
     origin:
         LatLng(leg.startLocation.lat().toDartDouble, leg.startLocation.lng().toDartDouble),
     destination:
         LatLng(leg.endLocation.lat().toDartDouble, leg.endLocation.lng().toDartDouble),
     startAddress: leg.startAddress.toDart,
     endAddress: leg.endAddress.toDart,
+    maneuvers: maneuvers,
   );
 }
 
@@ -133,6 +145,9 @@ extension type _TextValue._(JSObject _) implements JSObject {
 
 extension type _DirStep._(JSObject _) implements JSObject {
   external JSString? get maneuver;
+  external JSString? get instructions;
+  @JS('start_location')
+  external _MLatLng get startLocation;
 }
 
 extension type _MLatLng._(JSObject _) implements JSObject {

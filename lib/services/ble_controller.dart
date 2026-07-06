@@ -96,6 +96,20 @@ class BleController extends Notifier<BleState> {
     await Future<void>.delayed(const Duration(milliseconds: 350));
     return true;
   }
+
+  /// Low-level single pulse used by the Haptic Engine's cue player.
+  /// Real implementation: this becomes the firmware's 7-byte packet write.
+  Future<bool> pulse(
+    Wrist wrist, {
+    required double intensity,
+    required int durationMs,
+  }) async {
+    final band = wrist == Wrist.left ? state.left : state.right;
+    if (!band.isConnected) return false;
+    // Simulated buzz of the requested length.
+    await Future<void>.delayed(Duration(milliseconds: durationMs));
+    return true;
+  }
 }
 
 final bleControllerProvider =

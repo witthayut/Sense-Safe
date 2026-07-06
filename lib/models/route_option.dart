@@ -1,5 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'route_maneuver.dart';
+
 /// Which "best for…" badge a route earned, used to colour/label the cards.
 enum RouteBadge { ldFriendly, fastest, fewestTurns, alternative }
 
@@ -25,12 +27,16 @@ class RouteOption {
     required this.endAddress,
     required this.badge,
     required this.description,
+    this.maneuvers = const [],
   });
 
   final List<LatLng> points;
   final int durationSec;
   final int distanceM;
   final int turns; // number of maneuvers (turn-by-turn decisions)
+
+  /// Ordered turn-by-turn decision points; drives the Haptic Engine.
+  final List<RouteManeuver> maneuvers;
   final LatLng origin;
   final LatLng destination;
   final String startAddress;
@@ -59,6 +65,7 @@ class RouteOption {
         endAddress: endAddress,
         badge: badge ?? this.badge,
         description: description ?? this.description,
+        maneuvers: maneuvers,
       );
 
   LatLngBounds get bounds {

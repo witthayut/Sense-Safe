@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../app/app_navigation.dart';
@@ -9,6 +10,7 @@ import '../../app/maps_config.dart';
 import '../../app/theme.dart';
 import '../../models/place_prediction.dart';
 import '../../models/route_option.dart';
+import '../../services/ble_controller.dart';
 import '../../services/directions_service.dart';
 import '../../services/location_service.dart';
 import '../../services/places_service.dart';
@@ -200,9 +202,44 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
   }
 
   void _startDrive() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Guided drive + dashcam arrive in a later phase.'),
+    final option = _options[_selected];
+    final ble = ref.read(bleControllerProvider);
+    if (ble.bothConnected) {
+      context.push('/drive', extra: option);
+      return;
+    }
+    // Haptic guidance needs both bands: offer to connect right here rather
+    // than silently starting a drive that can't buzz.
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Wristbands not connected'),
+        content: const Text(
+          'The drive uses your wristbands to signal turns. '
+          'Connect them to start.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.sageDark,
+            ),
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await ref.read(bleControllerProvider.notifier).scanAndConnect();
+              if (!mounted) return;
+              if (ref.read(bleControllerProvider).bothConnected) {
+                context.push('/drive', extra: option);
+              }
+            },
+            child: const Text('Connect & start'),
+          ),
+        ],
       ),
     );
   }

@@ -9,7 +9,9 @@ import '../features/onboarding/welcome_screen.dart';
 import '../features/assessment/survey_screen.dart';
 import '../features/assessment/results_screen.dart';
 import '../features/calibration/test_vibration_screen.dart';
+import '../features/drive/drive_screen.dart';
 import '../features/home/home_shell.dart';
+import '../models/route_option.dart';
 import '../models/wristband.dart';
 import '../services/auth_controller.dart';
 
@@ -53,6 +55,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/home', builder: (c, s) => const HomeShell()),
+      GoRoute(
+        path: '/drive',
+        builder: (c, s) => DriveScreen(route: s.extra as RouteOption?),
+      ),
     ],
   );
 });

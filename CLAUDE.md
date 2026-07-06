@@ -51,20 +51,27 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
   (`ai_assistant_overlay.dart` + `assistant_controller.dart`), backed by
   `gemini_service.dart` (Gemini 2.0 Flash REST). **Not activated** — see
   "Gemini API" below.
+- ✅ **Haptic Engine (Phase 4 core, simulated)** — "Start drive" on the Routes
+  tab opens `/drive`: a simulated car follows the chosen route (40 km/h ×
+  1/2/4 demo control) and **buzzes the correct wrist ahead of each turn** via
+  mock BLE. Cue ladder per turn: PREP (300 m, half intensity) → ALERT
+  (speed × profile lead-time, clamped 60–250 m, pattern from rhythm) → NOW
+  (30 m, strongest). Arrival = gentle pulse on BOTH wrists (never used for
+  turns). Start requires both bands connected ("Connect & start" dialog);
+  mid-drive disconnect suppresses cues + shows a banner. GitHub issue #4.
 
 ## NEXT (in priority order)
 
-1. **Haptic Engine** (Phase 4 core) ⭐ — "Start drive" follows the chosen route
-   and **buzzes the correct wrist ahead of each turn**, using the vibration
-   profile + BLE controller. Runs on the **mock BLE** (demoable now). It is
-   **SAFETY-CRITICAL — left/right must be exact.** Design with `/grill-me` first
-   (turn detection, profile→buzz mapping, drive screen, off-route/arrival).
-2. **Phase 2 — Settings screen**: sliders to fine-tune intensity/lead-time/
+1. **Phase 2 — Settings screen**: sliders to fine-tune intensity/lead-time/
    rhythm; save to Firestore.
-3. **Real saved favourites** in Firestore (Home favourites are currently mock).
+2. **Real saved favourites** in Firestore (Home favourites are currently mock).
+3. **Real GPS drive mode** — swap the simulated position for a geolocator
+   stream projected onto the route via `RoutePath.project` (engine already
+   built for this); plus off-route re-routing (state exists, no detection UI).
 4. **Phase 3 — real BLE** (`flutter_blue_plus`). Biggest open dependency =
    the wristband firmware's **service/characteristic UUIDs** (see
-   `PROJECT_BRIEF.md` for the confirmed hardware: ESP32 + DRV2605L + LRA motor).
+   `PROJECT_BRIEF.md` for the confirmed hardware: ESP32 + DRV2605L + LRA
+   motor). `BleController.pulse()` becomes the 7-byte packet write.
 
 See `HapticDrive_Tech_Plan.md` and `PROJECT_BRIEF.md` (one level up) for the
 full long-term plan beyond this app scaffold.
@@ -73,7 +80,8 @@ full long-term plan beyond this app scaffold.
 
 - **BLE** is fully simulated (`ble_controller.dart`).
 - Home **favourites** are hardcoded labels; tapping routes by the label name.
-- **"Start drive & Dashcam"** button = stub (waits for the Haptic Engine).
+- **Drive position is simulated** (ticker along the polyline) — real GPS is a
+  future position source; dashcam/YOLO/stress features are out of scope here.
 - Forgot-password = stub.
 - **Gemini AI assistant** is merged but has no working API key wired in yet
   (waits on a billing decision — see "Gemini API" below). Without a key it
@@ -190,11 +198,21 @@ lib/
   a stable key, to avoid "controller used after dispose" when lists rebuild.
 - Widget tests run without Firebase init → `AuthController.build()` is guarded in
   try/catch so tests don't crash.
+- **SAFETY INVARIANT — left/right cues**: the wrist side comes ONLY from
+  Google's maneuver string via `wristForManeuver()` in
+  `models/route_maneuver.dart` (exhaustively tested). NEVER derive a side
+  from bearing/geometry math, and never add a second mapping point.
+  Ambiguous maneuvers (merge/straight/ferry) get NO haptic cue by design.
+- The cue logic is a pure class (`CueScheduler`) precisely so it's testable
+  without timers/BLE — keep it that way; the `DriveController` is thin glue.
 
 ## Tests / quality
 
 - `flutter analyze` clean. Tests: `profile_service_test.dart` (scoring),
-  `widget_test.dart` (boot smoke). Run `flutter test`.
+  `route_maneuver_test.dart` (SAFETY: exhaustive maneuver→wrist mapping),
+  `route_progress_test.dart` (polyline geometry), `cue_scheduler_test.dart`
+  (cue order/dedupe/thresholds), `widget_test.dart` (boot smoke).
+  Run `flutter test`.
 
 ## Git
 

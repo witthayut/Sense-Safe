@@ -99,6 +99,7 @@ class DirectionsService {
       endAddress: r.endAddress,
       badge: badge,
       description: description,
+      maneuvers: r.maneuvers,
     );
   }
 }

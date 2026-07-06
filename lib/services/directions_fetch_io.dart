@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/route_maneuver.dart';
 import 'directions_common.dart';
 
 /// Mobile/desktop fetch: the Directions web service over HTTP (no CORS here).
@@ -37,7 +38,18 @@ Future<List<RawRoute>> fetchRawRoutes({
 RawRoute _parse(Map<String, dynamic> route) {
   final leg = (route['legs'] as List).first as Map<String, dynamic>;
   final steps = (leg['steps'] as List).cast<Map<String, dynamic>>();
-  final turns = steps.where((s) => s.containsKey('maneuver')).length;
+  final maneuvers = <RouteManeuver>[
+    for (final s in steps)
+      if ((s['maneuver'] as String?)?.isNotEmpty ?? false)
+        RouteManeuver(
+          googleType: s['maneuver'] as String,
+          position: LatLng(
+            (s['start_location'] as Map<String, dynamic>)['lat'] as double,
+            (s['start_location'] as Map<String, dynamic>)['lng'] as double,
+          ),
+          instruction: stripHtml(s['html_instructions'] as String? ?? ''),
+        ),
+  ];
   final start = leg['start_location'] as Map<String, dynamic>;
   final end = leg['end_location'] as Map<String, dynamic>;
   return RawRoute(
@@ -46,11 +58,12 @@ RawRoute _parse(Map<String, dynamic> route) {
             as String),
     durationSec: (leg['duration'] as Map<String, dynamic>)['value'] as int,
     distanceM: (leg['distance'] as Map<String, dynamic>)['value'] as int,
-    turns: turns,
+    turns: maneuvers.length,
     origin: LatLng(start['lat'] as double, start['lng'] as double),
     destination: LatLng(end['lat'] as double, end['lng'] as double),
     startAddress: leg['start_address'] as String? ?? '',
     endAddress: leg['end_address'] as String? ?? '',
+    maneuvers: maneuvers,
   );
 }
 
