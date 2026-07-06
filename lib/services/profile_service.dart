@@ -30,24 +30,7 @@ class ProfileService {
       scores[d] = c == 0 ? 0.0 : (totals[d]! / c).clamp(0.0, 1.0);
     }
 
-    // Overall support need drives default intensity + lead time.
-    final overall = scores.values.isEmpty
-        ? 0.0
-        : scores.values.reduce((a, b) => a + b) / scores.length;
-
-    final intensity = (0.35 + overall * 0.5).clamp(0.0, 1.0);
-    final leadTime = (3 + (overall * 5)).round(); // 3..8 seconds
-    final rhythm = overall > 0.66
-        ? HapticRhythm.sharp
-        : (overall > 0.33 ? HapticRhythm.medium : HapticRhythm.soft);
-
-    return VibrationProfile(
-      scores: scores,
-      intensity: intensity,
-      leadTimeSeconds: leadTime,
-      rhythm: rhythm,
-      spatialType: _classify(scores),
-    );
+    return _profileFor(scores);
   }
 
   /// Builds a profile directly from a user's self-declared learning
@@ -71,10 +54,21 @@ class ProfileService {
       if (dim != null) scores[dim] = 0.85;
     }
 
-    final overall =
-        scores.values.reduce((a, b) => a + b) / scores.length;
+    return _profileFor(scores);
+  }
+
+  /// Derives the haptic tuning (intensity, lead time, rhythm) from the
+  /// dimension scores and assembles the profile. The single source of truth
+  /// for this mapping — both the survey path and the self-declared-LD path
+  /// go through here, so they can never drift apart.
+  VibrationProfile _profileFor(Map<ProfileDimension, double> scores) {
+    // Overall support need drives default intensity + lead time.
+    final overall = scores.values.isEmpty
+        ? 0.0
+        : scores.values.reduce((a, b) => a + b) / scores.length;
+
     final intensity = (0.35 + overall * 0.5).clamp(0.0, 1.0);
-    final leadTime = (3 + (overall * 5)).round();
+    final leadTime = (3 + (overall * 5)).round(); // 3..8 seconds
     final rhythm = overall > 0.66
         ? HapticRhythm.sharp
         : (overall > 0.33 ? HapticRhythm.medium : HapticRhythm.soft);

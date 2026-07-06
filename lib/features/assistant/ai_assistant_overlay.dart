@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
-import '../assistant/assistant_controller.dart';
+import '../../services/assistant_controller.dart';
 
 /// Wraps any screen with a floating AI assistant button (bottom-right).
 /// Pressing it opens a compact chat popup. Pressing again closes it.

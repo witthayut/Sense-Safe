@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/gemini_service.dart';
+
+import 'gemini_service.dart';
 
 enum MessageRole { user, assistant }
 
