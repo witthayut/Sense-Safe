@@ -71,7 +71,8 @@ String _friendlyStatus(String status, String? message) {
   switch (status) {
     case 'NOT_FOUND':
     case 'ZERO_RESULTS':
-      return 'No route found to that destination. Check the spelling.';
+      return 'No drivable route between those places — check the spelling, '
+          'and make sure both are reachable by road.';
     case 'REQUEST_DENIED':
       return 'Request denied — check the key & that Directions API is enabled.';
     case 'OVER_QUERY_LIMIT':

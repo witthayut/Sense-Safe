@@ -40,8 +40,23 @@ Future<List<RawRoute>> fetchRawRoutes({
   } on DirectionsException {
     rethrow;
   } catch (e) {
-    throw DirectionsException(_friendly(e.toString()));
+    throw DirectionsException(_friendly(_describe(e)));
   }
+}
+
+/// A rejected route() promise throws a MapsRequestError whose useful status
+/// (e.g. ZERO_RESULTS) lives in `code`/`message` — its toString() alone can
+/// be an unhelpful "[object Object]", so read the properties when present.
+String _describe(Object e) {
+  try {
+    final err = _JsError(e as JSObject);
+    final code = err.code?.toDart ?? '';
+    final msg = err.message?.toDart ?? '';
+    if (code.isNotEmpty || msg.isNotEmpty) return '$code $msg';
+  } catch (_) {
+    // Not a JS error object — fall through to toString().
+  }
+  return e.toString();
 }
 
 RawRoute _toRaw(_DirRoute r) {
@@ -79,7 +94,8 @@ RawRoute _toRaw(_DirRoute r) {
 
 String _friendly(String err) {
   if (err.contains('ZERO_RESULTS') || err.contains('NOT_FOUND')) {
-    return 'No route found to that destination. Check the spelling.';
+    return 'No drivable route between those places — check the spelling, '
+        'and make sure both are reachable by road.';
   }
   if (err.contains('REQUEST_DENIED')) {
     return 'Request denied — check the key & that Directions API is enabled.';
@@ -148,6 +164,12 @@ extension type _DirStep._(JSObject _) implements JSObject {
   external JSString? get instructions;
   @JS('start_location')
   external _MLatLng get startLocation;
+}
+
+/// Shape of a rejected-promise error (google.maps.MapsRequestError).
+extension type _JsError(JSObject _) implements JSObject {
+  external JSString? get code;
+  external JSString? get message;
 }
 
 extension type _MLatLng._(JSObject _) implements JSObject {
