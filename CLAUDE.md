@@ -76,6 +76,52 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
 See `HapticDrive_Tech_Plan.md` and `PROJECT_BRIEF.md` (one level up) for the
 full long-term plan beyond this app scaffold.
 
+## Working mode — TEACH, don't just build (since 2026-07-10)
+
+The user (beginner developer, Thai — ตอบไทยได้เสมอ) asked to LEARN from this
+project rather than have features built for them ("I feel so stupid since you
+did all of this"). New rule: **explain → user tries → review.** Go slower,
+guide instead of doing, give small check-questions each lesson, and wait for
+their answers before moving on.
+
+Lessons completed so far:
+1. The 3-layer mental model (models = what things ARE, services = what the
+   app DOES, features = what the user SEES; Riverpod is the glue; the real
+   backend is Firebase/Google servers, `services/` is the on-phone logic layer).
+2. `models/wristband.dart` line by line (enum, final, `int?`, copyWith —
+   "state is never modified, it's replaced").
+3. `devices_screen.dart` (ref.watch vs ref.read — "watch what you display,
+   read what you call"; screens are mirrors of state; WaitingScreen is
+   swapped in-place, not navigated to).
+4. Finding definitions: imports + Ctrl+Click / F12 / Shift+F12.
+5. SE thinking: the 6-activity loop, the 5 questions, the "finding format"
+   (behavior + evidence file:line + verdict + proposal), defense in depth.
+   Passed exercise: Test button disabled when disconnected (band_tile.dart:68).
+6. `ble_controller.dart` anatomy: Notifier skeleton, `state = ...` announces
+   changes, async/await, and the `_generation` race-condition guard.
+
+OPEN exercises — do NOT spoil the answers:
+- **Ticket #2**: what happens if a band disconnects MID-calibration?
+  (trace test_vibration_screen → calibration_controller; report in finding
+  format.)
+- 3 check questions on ble_controller: (a) how many rebuilds per Connect tap,
+  (b) why the app doesn't freeze during `await`, (c) walk the generation
+  guard for cancel-at-0.5s.
+
+## Pending decisions — waiting on the user (do NOT start these)
+
+- **AI enhancements** (proposed 2026-07-10; user explicitly said to wait for
+  confirmation): ① activate the existing Gemini assistant (needs billing),
+  ② AI route explanations in LD-friendly wording, ③ landmark hints ("turn at
+  the 7-Eleven", cache by route hash), ④ HAPU EMA personalisation from
+  post-trip surveys (no API cost, no hardware), ⑤ LD Score formula upgraded
+  to the report spec. Recommended order if approved: ① → ② → ④.
+- **Firmware (Arduino/ESP32)**: agreed plan = a `Sense&Safe/firmware/`
+  sibling folder (monorepo — firmware never goes inside `lib/`), and write
+  the BLE **protocol contract first** (`firmware/PROTOCOL.md`: service/
+  characteristic UUIDs + the 7-byte packet layout) before any sketch.
+  Unknown: whether the team has an ESP32 board in hand yet.
+
 ## Still mock / stubbed (don't mistake for done)
 
 - **BLE** is fully simulated (`ble_controller.dart`).
@@ -206,6 +252,11 @@ lib/
   (Done button, no device-connect); survey flow keeps "Use this profile".
 - **Map controller**: camera moves are wrapped (best-effort) + the preview map has
   a stable key, to avoid "controller used after dispose" when lists rebuild.
+- **Web Directions errors**: a rejected `DirectionsService.route()` promise is
+  a `MapsRequestError` whose status (e.g. ZERO_RESULTS) lives in its
+  `code`/`message` properties — `toString()` alone loses it. `_describe()` in
+  `directions_fetch_web.dart` reads them via JS interop; keep it. (Found via a
+  real user attempt to route Surat *India* → Chiang Mai: no drivable route.)
 - Widget tests run without Firebase init → `AuthController.build()` is guarded in
   try/catch so tests don't crash.
 - **SAFETY INVARIANT — left/right cues**: the wrist side comes ONLY from
