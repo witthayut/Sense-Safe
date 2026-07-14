@@ -113,6 +113,12 @@ OPEN exercises — do NOT spoil the answers:
 
 ## Pending decisions — waiting on the user (do NOT start these)
 
+- **Report/slide corrections** (from the full 44-page PDF audit, 2026-07-14 —
+  findings + judge-defense script recorded in `../PROJECT_BRIEF.md` ★★ audit
+  section): 4 slide fixes + a hardware erratum (report still says DRV2605L+LRA;
+  real set is AH024 PWM). Offered to draft corrected slide wording / erratum
+  page — user has not yet said yes.
+
 - **AI enhancements** (proposed 2026-07-10; user explicitly said to wait for
   confirmation): ① activate the existing Gemini assistant (needs billing),
   ② AI route explanations in LD-friendly wording, ③ landmark hints ("turn at
@@ -200,6 +206,10 @@ flutter run -d chrome      # or omit -d for a device/emulator
   and **hard-refresh** the browser (`Ctrl+Shift+R`).
 - Installed skills: `start-system`, `grilling`/`grill-me`, `check-project`,
   `check-architecture`.
+- **Reading PDFs** (e.g. `../Sense&Safe.pdf`): Poppler is installed via winget
+  but NOT on PATH — use the binaries directly at
+  `%LOCALAPPDATA%\Microsoft\WinGet\Packages\oschwartz10612.Poppler_*\poppler-25.07.0\Library\bin`
+  (`pdftotext -layout` works well; extracted text of the report is Thai).
 
 ## Architecture (lib/)
 
