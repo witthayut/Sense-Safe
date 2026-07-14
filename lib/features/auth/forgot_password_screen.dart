@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
+import '../../services/auth_controller.dart';
 import '../../widgets/pill_button.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _email = TextEditingController();
   bool _sent = false;
+  bool _sending = false;
 
   bool get _isValidEmail {
     final text = _email.text.trim();
@@ -24,6 +28,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void dispose() {
     _email.dispose();
     super.dispose();
+  }
+
+  Future<void> _send() async {
+    setState(() => _sending = true);
+    final err = await ref
+        .read(authControllerProvider.notifier)
+        .sendPasswordReset(_email.text);
+    if (!mounted) return;
+    setState(() {
+      _sending = false;
+      _sent = err == null;
+    });
+    // Per issue #5: unknown emails look like success (anti-enumeration),
+    // but real failures (network etc.) are shown honestly.
+    if (err != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   @override
@@ -55,10 +78,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 const SizedBox(height: 20),
                 PillButton(
                   label: _sent ? 'Link sent ✓' : 'Send reset link',
+                  loading: _sending,
                   // Disabled until a (basic) email is entered.
-                  onPressed: _isValidEmail
-                      ? () => setState(() => _sent = true)
-                      : null,
+                  onPressed: _isValidEmail && !_sending ? _send : null,
                 ),
                 const SizedBox(height: 8),
                 TextButton(

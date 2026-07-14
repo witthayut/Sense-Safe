@@ -64,6 +64,21 @@ class AuthController extends Notifier<AppUser?> {
     }
   }
 
+  /// Sends a password-reset email. Returns null on "success" — including
+  /// unknown emails, which are deliberately treated as success so the app
+  /// never reveals whether an address is registered (issue #5).
+  Future<String?> sendPasswordReset(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      return null;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') return null; // conceal, don't reveal
+      return _friendly(e);
+    } catch (_) {
+      return 'Could not send the reset email. Please try again.';
+    }
+  }
+
   Future<String?> register({
     required String fullName,
     required String email,
