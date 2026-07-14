@@ -70,8 +70,11 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
    built for this); plus off-route re-routing (state exists, no detection UI).
 4. **Phase 3 — real BLE** (`flutter_blue_plus`). Biggest open dependency =
    the wristband firmware's **service/characteristic UUIDs** (see
-   `PROJECT_BRIEF.md` for the confirmed hardware: ESP32 + DRV2605L + LRA
-   motor). `BleController.pulse()` becomes the 7-byte packet write.
+   `PROJECT_BRIEF.md` §3 for the theoretical hardware: ESP32 + DRV2605L +
+   LRA motor; see §3b for the **prototype BOM swap** as of 2026-07-10 —
+   ESP32-C3 Super Mini, GY-MAX30102, MPU6050, AH024 vibration module
+   instead of DRV2605L+LRA). `BleController.pulse()` becomes the 7-byte
+   packet write regardless of which board.
 
 See `HapticDrive_Tech_Plan.md` and `PROJECT_BRIEF.md` (one level up) for the
 full long-term plan beyond this app scaffold.
@@ -120,7 +123,13 @@ OPEN exercises — do NOT spoil the answers:
   sibling folder (monorepo — firmware never goes inside `lib/`), and write
   the BLE **protocol contract first** (`firmware/PROTOCOL.md`: service/
   characteristic UUIDs + the 7-byte packet layout) before any sketch.
-  Unknown: whether the team has an ESP32 board in hand yet.
+  **Hardware set confirmed 2026-07-14** (sourced replacements, see
+  PROJECT_BRIEF.md ★★ update): ESP32-C3 Super Mini ×2, MPU-6050,
+  GY-MAX30102, **AH024 PWM motor module** (NOT the planned DRV2605L+LRA —
+  intensity = raw PWM duty 0-255, coarser but fine for the prototype),
+  AA477 Type-C charger + 3.7V 500mAh LiPo. App impact: none —
+  `BleController.pulse(intensity, durationMs)` maps straight to
+  (duty, ms). Still unknown: whether parts are physically in hand yet.
 
 ## Still mock / stubbed (don't mistake for done)
 
