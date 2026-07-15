@@ -10,12 +10,14 @@ import '../../app/maps_config.dart';
 import '../../app/theme.dart';
 import '../../models/favourite.dart';
 import '../../models/place_prediction.dart';
+import '../../models/recent_trip.dart';
 import '../../models/route_option.dart';
 import '../../services/ble_controller.dart';
 import '../../services/directions_service.dart';
 import '../../services/favourites_controller.dart';
 import '../../services/location_service.dart';
 import '../../services/places_service.dart';
+import '../../services/recent_trips_controller.dart';
 import '../../widgets/pill_button.dart';
 import '../../widgets/section_label.dart';
 import 'widgets/full_route_map.dart';
@@ -209,10 +211,22 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
     });
   }
 
+  /// Remember this drive for the Home tab's Resume / Recent trips.
+  void _recordTrip(RouteOption option) {
+    final destination = _destination.text.trim();
+    if (destination.isEmpty) return;
+    ref.read(recentTripsControllerProvider.notifier).record(RecentTrip(
+          destination: destination,
+          durationSec: option.durationSec,
+          at: DateTime.now(),
+        ));
+  }
+
   void _startDrive() {
     final option = _options[_selected];
     final ble = ref.read(bleControllerProvider);
     if (ble.bothConnected) {
+      _recordTrip(option);
       context.push('/drive', extra: option);
       return;
     }
@@ -242,6 +256,7 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
               await ref.read(bleControllerProvider.notifier).scanAndConnect();
               if (!mounted) return;
               if (ref.read(bleControllerProvider).bothConnected) {
+                _recordTrip(option);
                 context.push('/drive', extra: option);
               }
             },

@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const Color sage = Color(0xFF7FB8A6); // primary accent
   static const Color sageDark = Color(0xFF4F8E7C);
+  static const Color sageDeep = Color(0xFF3C7466); // hero gradient end (design 1a)
   static const Color sageSoft = Color(0xFFD9ECE5); // pill button fill
+  static const Color onSage = Color(0xFFEAFBF2); // light text/icons on sage
   static const Color background = Color(0xFFF4F6F5);
   static const Color card = Colors.white;
   static const Color ink = Color(0xFF1F2A26);
