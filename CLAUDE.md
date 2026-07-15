@@ -46,6 +46,27 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
   **LD-friendly / fastest / fewest-turns**, fullscreen map, hr+min durations.
 - ✅ Home search + favourites now open the Routes tab and route there.
 - ✅ Committed to `main` (private repo `github.com/witthayut/Sense-Safe`).
+- ✅ **Forgot password (#5)**: real Firebase reset email; `user-not-found` is
+  deliberately shown as success (anti account-enumeration), network errors
+  shown honestly.
+- ✅ **Real favourites (#6)**: created ONLY via the ⭐ on the Routes results
+  header (destination guaranteed routable), stored at `users/{uid}.favourites`,
+  Home mirrors them; long-press removes.
+- ✅ **Settings screen (#7)**: Profile → "Adjust haptics" → sliders for
+  intensity/lead-time + rhythm picker + live preview via HapticCuePlayer;
+  saves through `AssessmentController.updateTuning()`; `copyWith` protects
+  assessment scores from user tuning.
+- ✅ **Hardening (#8, data half)**: per-user Firestore rules deployed
+  2026-07-15; key work deferred → issue #8 = launch-blocker checklist.
+- ✅ **Home redesign "1a Readiness Hero" (2026-07-17)**: user-supplied design
+  handoff implemented — sage-gradient hero status card with L/R battery
+  chips, one-tap **Resume last route**, **Recent trips** (REAL data: new
+  `RecentTrip` model + `recent_trips_controller`, last 5 drives stored at
+  `users/{uid}.recentTrips`, recorded on both Start-drive paths), favourites
+  as 3-column tiles. New tokens: `AppColors.sageDeep`, `AppColors.onSage`.
+- ✅ **Device phase opened on GitHub**: label `device` + milestone
+  "Phase: Device (wristband)" + issues **#9 protocol contract → #10 firmware
+  skeleton → #11 AH024 motor → #12 real BLE in app → #13 sensors (stretch)**.
 - ⏸️ **Gemini AI assistant** (teammate `Tam`'s feature) — merged into `main`,
   lint-clean, tested. Floating chat button on every tab
   (`ai_assistant_overlay.dart` + `assistant_controller.dart`), backed by
@@ -62,19 +83,16 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
 
 ## NEXT (in priority order)
 
-1. **Phase 2 — Settings screen**: sliders to fine-tune intensity/lead-time/
-   rhythm; save to Firestore.
-2. **Real saved favourites** in Firestore (Home favourites are currently mock).
+1. **Device #9 — BLE protocol contract** (`firmware/PROTOCOL.md`: UUIDs +
+   7-byte packet). Needs NO hardware; unblocks the whole device track
+   (#10–#12). Design it grilling-style with the user.
+2. **AI decision** — 5 proposals await the user (see Pending decisions).
 3. **Real GPS drive mode** — swap the simulated position for a geolocator
    stream projected onto the route via `RoutePath.project` (engine already
    built for this); plus off-route re-routing (state exists, no detection UI).
-4. **Phase 3 — real BLE** (`flutter_blue_plus`). Biggest open dependency =
-   the wristband firmware's **service/characteristic UUIDs** (see
-   `PROJECT_BRIEF.md` §3 for the theoretical hardware: ESP32 + DRV2605L +
-   LRA motor; see §3b for the **prototype BOM swap** as of 2026-07-10 —
-   ESP32-C3 Super Mini, GY-MAX30102, MPU6050, AH024 vibration module
-   instead of DRV2605L+LRA). `BleController.pulse()` becomes the 7-byte
-   packet write regardless of which board.
+4. **Device #12 — real BLE in the app** (`flutter_blue_plus`) behind the same
+   `BleController` API; `pulse()` becomes the 7-byte packet write. Hardware:
+   ESP32-C3 Super Mini ×2 + AH024 PWM motor etc. (PROJECT_BRIEF ★★ table).
 
 See `HapticDrive_Tech_Plan.md` and `PROJECT_BRIEF.md` (one level up) for the
 full long-term plan beyond this app scaffold.
@@ -106,47 +124,39 @@ Lessons completed so far:
 6. `ble_controller.dart` anatomy: Notifier skeleton, `state = ...` announces
    changes, async/await, and the `_generation` race-condition guard.
 
-OPEN exercises — do NOT spoil the answers:
-- **Ticket #2**: what happens if a band disconnects MID-calibration?
-  (trace test_vibration_screen → calibration_controller; report in finding
-  format.)
-- 3 check questions on ble_controller: (a) how many rebuilds per Connect tap,
-  (b) why the app doesn't freeze during `await`, (c) walk the generation
-  guard for cancel-at-0.5s.
+Former open exercises (retired 2026-07-15 when the mode changed to
+build+explain — free to answer/discuss openly if the user ever asks):
+Ticket #2 (mid-calibration disconnect trace) and the 3 ble_controller
+check questions.
 
 ## Pending decisions — waiting on the user (do NOT start these)
 
-- **Report/slide corrections** (from the full 44-page PDF audit, 2026-07-14 —
-  findings + judge-defense script recorded in `../PROJECT_BRIEF.md` ★★ audit
-  section): 4 slide fixes + a hardware erratum (report still says DRV2605L+LRA;
-  real set is AH024 PWM). Offered to draft corrected slide wording / erratum
-  page — user has not yet said yes.
-
+- **Report corrections**: the AI-architecture slide was FIXED by the user
+  2026-07-17 (all audit items pass — see PROJECT_BRIEF ★★ audit section).
+  Remaining: the **hardware erratum** (report p.2.8 still says DRV2605L+LRA;
+  real set is AH024 PWM) — offered to draft it, user hasn't said yes.
 - **AI enhancements** (proposed 2026-07-10; user explicitly said to wait for
   confirmation): ① activate the existing Gemini assistant (needs billing),
   ② AI route explanations in LD-friendly wording, ③ landmark hints ("turn at
   the 7-Eleven", cache by route hash), ④ HAPU EMA personalisation from
   post-trip surveys (no API cost, no hardware), ⑤ LD Score formula upgraded
   to the report spec. Recommended order if approved: ① → ② → ④.
-- **Firmware (Arduino/ESP32)**: agreed plan = a `Sense&Safe/firmware/`
-  sibling folder (monorepo — firmware never goes inside `lib/`), and write
-  the BLE **protocol contract first** (`firmware/PROTOCOL.md`: service/
-  characteristic UUIDs + the 7-byte packet layout) before any sketch.
-  **Hardware set confirmed 2026-07-14** (sourced replacements, see
-  PROJECT_BRIEF.md ★★ update): ESP32-C3 Super Mini ×2, MPU-6050,
-  GY-MAX30102, **AH024 PWM motor module** (NOT the planned DRV2605L+LRA —
-  intensity = raw PWM duty 0-255, coarser but fine for the prototype),
-  AA477 Type-C charger + 3.7V 500mAh LiPo. App impact: none —
-  `BleController.pulse(intensity, durationMs)` maps straight to
-  (duty, ms). Still unknown: whether parts are physically in hand yet.
+- **Firmware (Arduino/ESP32)**: plan is now tracked as GitHub issues
+  **#9–#13** (label `device`, milestone "Phase: Device (wristband)") —
+  protocol contract FIRST (#9, `Sense&Safe/firmware/PROTOCOL.md`: UUIDs +
+  7-byte packet; firmware never goes inside `lib/`). Hardware set confirmed
+  2026-07-14 (PROJECT_BRIEF ★★ table): ESP32-C3 Super Mini ×2, MPU-6050,
+  GY-MAX30102, **AH024 PWM motor** (intensity = PWM duty 0-255), AA477 +
+  LiPo. App impact: none — `pulse(intensity, durationMs)` maps to (duty, ms).
+  Still unknown: whether parts are physically in hand yet. Waiting for the
+  user to say "start #9".
 
 ## Still mock / stubbed (don't mistake for done)
 
-- **BLE** is fully simulated (`ble_controller.dart`).
-- Home **favourites** are hardcoded labels; tapping routes by the label name.
+- **BLE** is fully simulated (`ble_controller.dart`) — battery %s on Home's
+  hero card are the mock's 92/88.
 - **Drive position is simulated** (ticker along the polyline) — real GPS is a
   future position source; dashcam/YOLO/stress features are out of scope here.
-- Forgot-password = stub.
 - **Gemini AI assistant** is merged but has no working API key wired in yet
   (waits on a billing decision — see "Gemini API" below). Without a key it
   fails gracefully: shows "API key not configured" in the chat.
@@ -167,9 +177,11 @@ OPEN exercises — do NOT spoil the answers:
   It IS **API-restricted** to 4 APIs (Maps JS, Maps SDK Android, Directions,
   Places). On **free trial** (no auto-charge; ฿10 budget alert set). Repo is
   **private**, so committing it is acceptable for now.
-  - TODO before public launch: split into per-platform keys with
-    HTTP-referrer (web) + Android-app/SHA-1 restrictions. (One key can only have
-    ONE application-restriction type, which is why we left it as None for now.)
+  - **Decision 2026-07-17 (user chose)**: key-splitting/restrictions stay
+    deferred until there's a public domain — referrer locks are meaningless
+    on localhost, Android is unused, and web-service endpoints need a proxy
+    anyway (do together with the Gemini proxy). Tracked as issue **#8** with
+    the red `launch-blocker` label = the pre-launch checklist.
 - **Gemini API** (for the AI assistant, `gemini_service.dart`): key is passed
   via `--dart-define=GEMINI_API_KEY=...`, never committed to source — good
   practice, but not yet wired into `/start-system` because there's no working
@@ -222,27 +234,33 @@ lib/
                            (home tab + pending-destination providers)
   models/                 app_user, learning_difference, survey,
                            vibration_profile, route_option, route_maneuver,
-                           place_prediction, wristband
+                           place_prediction, wristband, favourite, recent_trip
   services/                ALL Riverpod controllers + IO services + pure logic:
-                           auth/assessment/ble/calibration/drive/assistant
-                           controllers; profile/location/gemini services;
+                           auth/assessment/ble/calibration/drive/assistant/
+                           favourites/recent_trips controllers;
+                           profile/location/gemini services;
                            directions_service + places_service (each with
                            _fetch/_fetch_io/_fetch_web platform split);
                            cue_scheduler, route_progress, haptic_cue_player
   features/
-    auth/                 login, register, forgot password
+    auth/                 login, register, forgot password (real reset email)
     onboarding/            welcome + connect wristbands
     assessment/            6-question survey + results
     calibration/           test vibration (left/right calibration pages)
     devices/               pairing + connect/waiting
-    routes/                Google Maps route picker
+    routes/                Google Maps route picker + ⭐ save favourite
       widgets/              route_search, predictions_list, map_preview,
                              full_route_map, route_card, hints
     drive/                 guided-drive screen (Haptic Engine UI)
-    home/                  bottom-nav shell, home, profile
+    settings/              haptic fine-tuning (sliders + preview)
+    home/                  bottom-nav shell, home ("1a Readiness Hero"
+                           design: hero status card, resume, recents,
+                           favourite tiles), profile
     assistant/              floating Gemini AI chat overlay
   widgets/                 pill_button, section_label, band_tile
 ```
+Repo root also holds `firestore.rules` + `firebase.json` (deploy with
+`firebase deploy --only firestore:rules`).
 
 - One folder per feature under `lib/features/`.
 - **Screens are dumb** — they read/watch Riverpod providers. Business logic
@@ -288,15 +306,21 @@ lib/
 
 ## Tests / quality
 
-- `flutter analyze` clean. Tests: `profile_service_test.dart` (scoring),
-  `route_maneuver_test.dart` (SAFETY: exhaustive maneuver→wrist mapping),
-  `route_progress_test.dart` (polyline geometry), `cue_scheduler_test.dart`
-  (cue order/dedupe/thresholds), `widget_test.dart` (boot smoke).
-  Run `flutter test`.
+- `flutter analyze` clean; **31 tests** passing. Files: `profile_service_test`
+  (scoring), `route_maneuver_test` (SAFETY: exhaustive maneuver→wrist),
+  `route_progress_test` (geometry), `cue_scheduler_test` (cue order/dedupe),
+  `favourite_test` + `recent_trip_test` + `vibration_profile_test`
+  (model round-trips), `widget_test` (boot smoke). Run `flutter test`.
 
-## Git
+## Git / GitHub
 
 - Repo: `github.com/witthayut/Sense-Safe` (**private**). Default branch **main**
   has all current work, including teammate `Tam`'s frontend redesign (ported
   earlier) and Gemini assistant feature (merged 2026-07-02). Feature branches
   are merged via fast-forward/merge into main.
+- **Issue board**: #4 Haptic Engine (OPEN — awaiting the user's manual verify,
+  then THEY close it); #5/#6/#7 closed; #8 hardening (OPEN, `launch-blocker`
+  label = pre-launch checklist); #9–#13 device track (label `device`,
+  milestone "Phase: Device (wristband)", #9 first). Convention: commits that
+  finish an issue say `Closes #N`; ideas not yet approved stay in this file,
+  not on the board.
