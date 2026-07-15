@@ -94,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               const SizedBox(height: 20),
 
-              _StatusBanner(connected: ble.bothConnected),
+              _StatusBanner(ble: ble),
 
               const SizedBox(height: 16),
 
@@ -133,12 +133,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // ─── Wristband Status Banner ──────────────────────────────────────────────────
 
 class _StatusBanner extends StatelessWidget {
-  const _StatusBanner({required this.connected});
+  const _StatusBanner({required this.ble});
 
-  final bool connected;
+  final BleState ble;
 
   @override
   Widget build(BuildContext context) {
+    final connected = ble.bothConnected;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -192,10 +193,65 @@ class _StatusBanner extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            connected ? Icons.verified_user_outlined : Icons.bluetooth_disabled,
-            color: connected ? AppColors.sageDark : Colors.grey,
-            size: 22,
+          if (connected) ...[
+            _BatteryChip(label: 'L', pct: ble.left.batteryPct),
+            const SizedBox(width: 6),
+            _BatteryChip(label: 'R', pct: ble.right.batteryPct),
+          ] else
+            const Icon(Icons.bluetooth_disabled, color: Colors.grey, size: 22),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact per-wrist battery indicator shown in the status banner.
+class _BatteryChip extends StatelessWidget {
+  const _BatteryChip({required this.label, required this.pct});
+
+  final String label;
+  final int? pct;
+
+  @override
+  Widget build(BuildContext context) {
+    final level = pct ?? 0;
+    final low = level < 20;
+    final icon = level >= 80
+        ? Icons.battery_full
+        : level >= 50
+            ? Icons.battery_5_bar
+            : level >= 20
+                ? Icons.battery_3_bar
+                : Icons.battery_1_bar;
+    final color = low ? AppColors.danger : AppColors.sageDark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 3),
+          Icon(icon, size: 14, color: color),
+          Text(
+            pct != null ? '$pct%' : '--',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.ink,
+            ),
           ),
         ],
       ),
