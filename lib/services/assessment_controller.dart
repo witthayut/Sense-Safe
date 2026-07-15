@@ -90,6 +90,30 @@ class AssessmentController extends Notifier<AssessmentState> {
     return profile;
   }
 
+  /// Settings screen: user fine-tunes intensity / lead time / rhythm.
+  /// Starts from a medium default if they never completed an assessment.
+  void updateTuning({
+    double? intensity,
+    int? leadTimeSeconds,
+    HapticRhythm? rhythm,
+  }) {
+    final base = state.profile ??
+        const VibrationProfile(
+          scores: {},
+          intensity: 0.6,
+          leadTimeSeconds: 5,
+          rhythm: HapticRhythm.medium,
+          spatialType: 'Balanced profile',
+        );
+    final updated = base.copyWith(
+      intensity: intensity,
+      leadTimeSeconds: leadTimeSeconds,
+      rhythm: rhythm,
+    );
+    state = state.copyWith(profile: updated);
+    _save(updated);
+  }
+
   Future<void> _save(VibrationProfile profile) async {
     final user = ref.read(authControllerProvider);
     if (user == null) return;

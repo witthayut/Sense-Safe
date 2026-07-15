@@ -41,6 +41,21 @@ class VibrationProfile {
   /// A friendly classification label, e.g. "Dyspraxia-leaning".
   final String spatialType;
 
+  /// New profile with some tuning values replaced — used by the Settings
+  /// screen so user adjustments never touch the assessment scores/label.
+  VibrationProfile copyWith({
+    double? intensity,
+    int? leadTimeSeconds,
+    HapticRhythm? rhythm,
+  }) =>
+      VibrationProfile(
+        scores: scores,
+        intensity: intensity ?? this.intensity,
+        leadTimeSeconds: leadTimeSeconds ?? this.leadTimeSeconds,
+        rhythm: rhythm ?? this.rhythm,
+        spatialType: spatialType,
+      );
+
   double scoreFor(ProfileDimension d) => scores[d] ?? 0.0;
 
   /// Confidence (inverse of support-need) as a percentage 0..100.

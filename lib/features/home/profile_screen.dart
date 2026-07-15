@@ -146,13 +146,21 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                 ),
 
-          if (profile != null) ...[
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => context.push('/results?view=true'),
-              child: const Text('View full results'),
-            ),
-          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => context.push('/settings'),
+                icon: const Icon(Icons.tune, size: 18),
+                label: const Text('Adjust haptics'),
+              ),
+              if (profile != null)
+                TextButton(
+                  onPressed: () => context.push('/results?view=true'),
+                  child: const Text('View full results'),
+                ),
+            ],
+          ),
 
           const SizedBox(height: 26),
 

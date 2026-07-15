@@ -11,6 +11,7 @@ import '../features/assessment/results_screen.dart';
 import '../features/calibration/test_vibration_screen.dart';
 import '../features/drive/drive_screen.dart';
 import '../features/home/home_shell.dart';
+import '../features/settings/settings_screen.dart';
 import '../models/route_option.dart';
 import '../models/wristband.dart';
 import '../services/auth_controller.dart';
@@ -59,6 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/drive',
         builder: (c, s) => DriveScreen(route: s.extra as RouteOption?),
       ),
+      GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
     ],
   );
 });
