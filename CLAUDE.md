@@ -154,17 +154,14 @@ OPEN exercises — do NOT spoil the answers:
 ## External services / accounts
 
 - **Firebase project**: `senseandsafe-8a030` (display "SenseAndSafe"). Auth =
-  Email/Password. Firestore region **asia-southeast1**, currently **Test mode**.
-  Config in `lib/firebase_options.dart` (+ `android/app/google-services.json`)
+  Email/Password. Firestore region **asia-southeast1**. Config in
+  `lib/firebase_options.dart` (+ `android/app/google-services.json`)
   — safe to commit (Google config keys).
-- **Per-user Firestore rules** (apply before any real launch — replaces test mode):
-  ```
-  rules_version = '2';
-  service cloud.firestore { match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-  }}}
-  ```
+- **Firestore security: per-user rules DEPLOYED 2026-07-15** (test mode is
+  gone). Rules live in `firestore.rules` (deployed via
+  `firebase deploy --only firestore:rules`); verified by an unauthenticated
+  REST probe: 404/allowed before → 403 PERMISSION_DENIED after. Each signed-in
+  user can only read/write their own `users/{uid}` doc.
 - **Google Maps key** (ends `…mhLsvg`) is in `web/index.html`,
   `android/app/src/main/AndroidManifest.xml`, and `lib/app/maps_config.dart`.
   It IS **API-restricted** to 4 APIs (Maps JS, Maps SDK Android, Directions,
