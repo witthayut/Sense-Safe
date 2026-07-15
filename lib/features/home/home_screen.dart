@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app_navigation.dart';
 import '../../app/theme.dart';
+import '../../models/favourite.dart';
 import '../../services/auth_controller.dart';
 import '../../services/ble_controller.dart';
+import '../../services/favourites_controller.dart';
 import '../../widgets/section_label.dart';
 
 /// "Where to today?" — wristband status, search bar, favourite destinations.
@@ -19,16 +21,38 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _search = TextEditingController();
 
-  static const _favourites = [
-    ('Home', '12 km · 18 min', Icons.home_outlined),
-    ('Work', '8 km · 21 min', Icons.work_outline),
-    ('University', '26 km · 40 min', Icons.school_outlined),
-  ];
-
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  /// Long-press a favourite → confirm before removing it.
+  void _confirmRemove(Favourite favourite) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Remove "${favourite.label}"?'),
+        content: const Text('You can save it again from the Routes tab.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              ref
+                  .read(favouritesControllerProvider.notifier)
+                  .removeByDestination(favourite.destination);
+            },
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Hand a destination to the Routes tab and switch to it.
@@ -44,6 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider);
     final ble = ref.watch(bleControllerProvider);
+    final favourites = ref.watch(favouritesControllerProvider);
     final firstName = (user?.fullName ?? 'there').split(' ').first;
 
     return SafeArea(
@@ -83,16 +108,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SectionLabel('Favourites'),
               const SizedBox(height: 12),
 
-              for (final (name, detail, icon) in _favourites)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _FavouriteCard(
-                    name: name,
-                    detail: detail,
-                    icon: icon,
-                    onTap: () => _routeTo(name),
+              if (favourites.isEmpty)
+                const _NoFavouritesHint()
+              else
+                for (final favourite in favourites)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _FavouriteCard(
+                      name: favourite.label,
+                      detail: favourite.destination,
+                      icon: Icons.place_outlined,
+                      onTap: () => _routeTo(favourite.destination),
+                      onLongPress: () => _confirmRemove(favourite),
+                    ),
                   ),
-                ),
             ],
           ),
         ),
@@ -226,6 +255,36 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
+// ─── Empty favourites hint ────────────────────────────────────────────────────
+
+class _NoFavouritesHint extends StatelessWidget {
+  const _NoFavouritesHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.star_border, color: AppColors.inkSoft, size: 22),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No favourites yet — search a route, then tap the star to '
+              'save it here.',
+              style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Favourite Destination Card ───────────────────────────────────────────────
 
 class _FavouriteCard extends StatelessWidget {
@@ -234,12 +293,14 @@ class _FavouriteCard extends StatelessWidget {
     required this.detail,
     required this.icon,
     required this.onTap,
+    this.onLongPress,
   });
 
   final String name;
   final String detail;
   final IconData icon;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -249,6 +310,7 @@ class _FavouriteCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(

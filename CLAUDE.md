@@ -79,13 +79,16 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
 See `HapticDrive_Tech_Plan.md` and `PROJECT_BRIEF.md` (one level up) for the
 full long-term plan beyond this app scaffold.
 
-## Working mode — TEACH, don't just build (since 2026-07-10)
+## Working mode — BUILD + EXPLAIN (updated 2026-07-15)
 
-The user (beginner developer, Thai — ตอบไทยได้เสมอ) asked to LEARN from this
-project rather than have features built for them ("I feel so stupid since you
-did all of this"). New rule: **explain → user tries → review.** Go slower,
-guide instead of doing, give small check-questions each lesson, and wait for
-their answers before moving on.
+The user (beginner developer, Thai — ตอบไทยได้เสมอ) first asked to be taught
+hands-on (2026-07-10), then refined it (2026-07-15): "ไม่ต้องสอนผมเขียน
+แต่อธิบายว่าคุณทำอะไรก็พอ เน้นความเข้าใจของทั้งโครงการ" — **implement directly,
+then explain at the project/architecture level** (what was added, where it
+sits in the 3-layer model, how data flows, why this design). No more
+fill-in-the-blank typing exercises. Product decisions (trade-offs, money,
+scope) still go to the user — recommend and let them pick; if they defer,
+decide and proceed.
 
 Lessons completed so far:
 1. The 3-layer mental model (models = what things ARE, services = what the

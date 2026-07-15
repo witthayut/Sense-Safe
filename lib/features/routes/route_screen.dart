@@ -8,10 +8,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../app/app_navigation.dart';
 import '../../app/maps_config.dart';
 import '../../app/theme.dart';
+import '../../models/favourite.dart';
 import '../../models/place_prediction.dart';
 import '../../models/route_option.dart';
 import '../../services/ble_controller.dart';
 import '../../services/directions_service.dart';
+import '../../services/favourites_controller.dart';
 import '../../services/location_service.dart';
 import '../../services/places_service.dart';
 import '../../widgets/pill_button.dart';
@@ -250,6 +252,62 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
     );
   }
 
+  /// ⭐ on the results header: save the just-searched destination as a
+  /// favourite (guaranteed routable — we found routes for it seconds ago),
+  /// or remove it if it's already saved.
+  void _toggleFavourite() {
+    final destination = _destination.text.trim();
+    if (destination.isEmpty) return;
+    final notifier = ref.read(favouritesControllerProvider.notifier);
+
+    if (notifier.contains(destination)) {
+      notifier.removeByDestination(destination);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from favourites')),
+      );
+      return;
+    }
+
+    // Suggest a short label from the first part of the place description.
+    final labelController =
+        TextEditingController(text: destination.split(',').first.trim());
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Save favourite'),
+        content: TextField(
+          controller: labelController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Short name (e.g. Home, Work)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.sageDark),
+            onPressed: () {
+              final label = labelController.text.trim();
+              if (label.isEmpty) return;
+              Navigator.of(dialogContext).pop();
+              ref.read(favouritesControllerProvider.notifier).add(
+                    Favourite(label: label, destination: destination),
+                  );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Saved "$label" to favourites')),
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openFullMap() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -278,6 +336,9 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
 
     final hasRoutes = _options.isNotEmpty;
     final selected = hasRoutes ? _options[_selected] : null;
+    final isFavourite = ref
+        .watch(favouritesControllerProvider)
+        .any((f) => f.destination == _destination.text.trim());
 
     return SafeArea(
       child: Center(
@@ -347,6 +408,20 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
                 Row(
                   children: [
                     const SectionLabel('Choose a route'),
+                    IconButton(
+                      tooltip: isFavourite
+                          ? 'Remove from favourites'
+                          : 'Save as favourite',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _toggleFavourite,
+                      icon: Icon(
+                        isFavourite ? Icons.star : Icons.star_border,
+                        color: isFavourite
+                            ? AppColors.warn
+                            : AppColors.inkSoft,
+                        size: 22,
+                      ),
+                    ),
                     const Spacer(),
                     Text('${_options.length} options',
                         style: const TextStyle(
