@@ -16,6 +16,7 @@ class AppColors {
   static const Color line = Color(0xFFE3E8E6);
   static const Color surfaceMuted = Color(0xFFEDEFF1); // inset controls (pulse buttons)
   static const Color warn = Color(0xFFE08A4B);
+  static const Color warnSoft = Color(0xFFFBEADB); // "needs support" chip fill
   static const Color danger = Color(0xFFD45D5D);
   static const Color sand = Color(0xFFF0E8D6); // warm "Test Vibration" button
 
