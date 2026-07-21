@@ -73,10 +73,22 @@ RawRoute _toRaw(_DirRoute r) {
           instruction: stripHtml(s.instructions?.toDart ?? ''),
         ),
   ];
-  final points = [
-    for (final p in r.overviewPath.toDart)
-      LatLng(p.lat().toDartDouble, p.lng().toDartDouble),
-  ];
+  // Build the path from PER-STEP paths, not overview_path: the overview is
+  // heavily simplified (cuts across blocks), which made the simulated drive
+  // leave the road and threw off cue distances.
+  final points = <LatLng>[];
+  for (final s in leg.steps.toDart) {
+    for (final p in s.path.toDart) {
+      final ll = LatLng(p.lat().toDartDouble, p.lng().toDartDouble);
+      if (points.isEmpty || points.last != ll) points.add(ll); // skip joints
+    }
+  }
+  if (points.isEmpty) {
+    points.addAll([
+      for (final p in r.overviewPath.toDart)
+        LatLng(p.lat().toDartDouble, p.lng().toDartDouble),
+    ]);
+  }
   return RawRoute(
     points: points,
     durationSec: leg.duration.value.toDartInt,
@@ -164,6 +176,10 @@ extension type _DirStep._(JSObject _) implements JSObject {
   external JSString? get instructions;
   @JS('start_location')
   external _MLatLng get startLocation;
+
+  /// Detailed road-following points for this step (unlike overview_path,
+  /// which is simplified for thumbnails).
+  external JSArray<_MLatLng> get path;
 }
 
 /// Shape of a rejected-promise error (google.maps.MapsRequestError).

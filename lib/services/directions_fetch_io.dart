@@ -52,10 +52,26 @@ RawRoute _parse(Map<String, dynamic> route) {
   ];
   final start = leg['start_location'] as Map<String, dynamic>;
   final end = leg['end_location'] as Map<String, dynamic>;
-  return RawRoute(
-    points: decodePolyline(
+
+  // Build the path from PER-STEP polylines, not overview_polyline: the
+  // overview is heavily simplified (cuts across blocks), which made the
+  // simulated drive leave the road and threw off cue distances.
+  final points = <LatLng>[];
+  for (final s in steps) {
+    final encoded =
+        ((s['polyline'] as Map<String, dynamic>?)?['points'] as String?) ?? '';
+    for (final p in decodePolyline(encoded)) {
+      if (points.isEmpty || points.last != p) points.add(p); // skip joints
+    }
+  }
+  if (points.isEmpty) {
+    points.addAll(decodePolyline(
         (route['overview_polyline'] as Map<String, dynamic>)['points']
-            as String),
+            as String));
+  }
+
+  return RawRoute(
+    points: points,
     durationSec: (leg['duration'] as Map<String, dynamic>)['value'] as int,
     distanceM: (leg['distance'] as Map<String, dynamic>)['value'] as int,
     turns: maneuvers.length,
