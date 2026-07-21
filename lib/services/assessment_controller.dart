@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/learning_difference.dart';
 import '../models/survey.dart';
+import '../models/trip_survey.dart';
 import '../models/vibration_profile.dart';
 import 'auth_controller.dart';
+import 'hapu_ema.dart';
 import 'profile_service.dart';
 
 class AssessmentState {
@@ -90,6 +92,63 @@ class AssessmentController extends Notifier<AssessmentState> {
     return profile;
   }
 
+  /// HAPU (report §3.3–3.4): apply one post-trip Quick Survey. Q2/Q3 nudge
+  /// lead-time/intensity via [HapuEma]; the full survey record is stored to
+  /// Firestore for the future K-Means / history work. Returns the tuned
+  /// values + whether anything actually changed (for the UI to report).
+  ({double intensity, int leadTimeSeconds, bool changed}) applyTripSurvey(
+      TripSurvey survey) {
+    final base = state.profile ?? _defaultProfile;
+    final tuned = HapuEma.apply(base, survey);
+    final changed = tuned.intensity != base.intensity ||
+        tuned.leadTimeSeconds != base.leadTimeSeconds;
+
+    if (changed) {
+      final updated = base.copyWith(
+        intensity: tuned.intensity,
+        leadTimeSeconds: tuned.leadTimeSeconds,
+      );
+      state = state.copyWith(profile: updated);
+      _save(updated);
+    } else if (state.profile == null) {
+      // First-ever survey with no assessment: persist the default baseline
+      // so future EMA nudges have a stored starting point.
+      state = state.copyWith(profile: base);
+      _save(base);
+    }
+
+    _storeSurvey(survey);
+    return (
+      intensity: tuned.intensity,
+      leadTimeSeconds: tuned.leadTimeSeconds,
+      changed: changed,
+    );
+  }
+
+  /// Best-effort append of the raw survey record (evidence + future K-Means).
+  Future<void> _storeSurvey(TripSurvey survey) async {
+    final user = ref.read(authControllerProvider);
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.id).set(
+        {
+          'tripSurveys': FieldValue.arrayUnion([survey.toMap()]),
+        },
+        SetOptions(merge: true),
+      );
+    } catch (_) {
+      // offline / rules — profile tuning above still applied in memory.
+    }
+  }
+
+  static const _defaultProfile = VibrationProfile(
+    scores: {},
+    intensity: 0.6,
+    leadTimeSeconds: 5,
+    rhythm: HapticRhythm.medium,
+    spatialType: 'Balanced profile',
+  );
+
   /// Settings screen: user fine-tunes intensity / lead time / rhythm.
   /// Starts from a medium default if they never completed an assessment.
   void updateTuning({
@@ -97,14 +156,7 @@ class AssessmentController extends Notifier<AssessmentState> {
     int? leadTimeSeconds,
     HapticRhythm? rhythm,
   }) {
-    final base = state.profile ??
-        const VibrationProfile(
-          scores: {},
-          intensity: 0.6,
-          leadTimeSeconds: 5,
-          rhythm: HapticRhythm.medium,
-          spatialType: 'Balanced profile',
-        );
+    final base = state.profile ?? _defaultProfile;
     final updated = base.copyWith(
       intensity: intensity,
       leadTimeSeconds: leadTimeSeconds,

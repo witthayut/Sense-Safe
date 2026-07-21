@@ -5,11 +5,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../app/theme.dart';
 import '../../models/route_option.dart';
+import '../../models/trip_survey.dart';
 import '../../models/wristband.dart';
+import '../../services/assessment_controller.dart';
 import '../../services/ble_controller.dart';
 import '../../services/cue_scheduler.dart';
 import '../../services/drive_controller.dart';
 import '../../widgets/pill_button.dart';
+import 'widgets/trip_survey_sheet.dart';
 
 /// Guided drive screen: the simulated car follows the chosen route on the
 /// map while the Haptic Engine buzzes the correct wrist ahead of each turn.
@@ -55,9 +58,34 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     }
   }
 
-  void _endDrive() {
+  /// End of every drive (End drive button OR arrival Done): stop the engine,
+  /// show the Quick Survey (report §3.3), feed answers to HAPU's EMA, then
+  /// leave the screen. Skipping the survey is always allowed.
+  Future<void> _endDrive() async {
     ref.read(driveControllerProvider.notifier).stop();
-    if (mounted) context.pop();
+
+    final survey = await showModalBottomSheet<TripSurvey>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const TripSurveySheet(),
+    );
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    if (survey != null) {
+      final result = ref
+          .read(assessmentControllerProvider.notifier)
+          .applyTripSurvey(survey);
+      messenger.showSnackBar(SnackBar(
+        content: Text(result.changed
+            ? 'Profile tuned: strength '
+                '${(result.intensity * 100).round()}% · '
+                'warn ${result.leadTimeSeconds}s before turns'
+            : 'Thanks! Feedback saved.'),
+      ));
+    }
+    context.pop();
   }
 
   @override

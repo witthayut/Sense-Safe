@@ -67,6 +67,14 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
 - ✅ **Device phase opened on GitHub**: label `device` + milestone
   "Phase: Device (wristband)" + issues **#9 protocol contract → #10 firmware
   skeleton → #11 AH024 motor → #12 real BLE in app → #13 sensors (stretch)**.
+- ✅ **HAPU EMA + Quick Survey (2026-07-21, = AI proposal ④)**: ending any
+  drive shows the report's §3.3 five-question survey (big chips, skippable,
+  friendly defaults). Q2/Q3 answers run the §3.4 EMA (α=0.3, `HapuEma` pure
+  class) nudging intensity ±0.09 / lead-time ≈±0.9s per trip, clamped to the
+  Settings slider ranges; "just right" returns the EXACT value (no FP drift).
+  Full survey records append to `users/{uid}.tripSurveys` for future
+  K-Means/history work. Route paths also fixed the same day to per-step
+  geometry (overview polyline cut across blocks).
 - ⏸️ **Gemini AI assistant** (teammate `Tam`'s feature) — merged into `main`,
   lint-clean, tested. Floating chat button on every tab
   (`ai_assistant_overlay.dart` + `assistant_controller.dart`), backed by
@@ -135,12 +143,13 @@ check questions.
   2026-07-17 (all audit items pass — see PROJECT_BRIEF ★★ audit section).
   Remaining: the **hardware erratum** (report p.2.8 still says DRV2605L+LRA;
   real set is AH024 PWM) — offered to draft it, user hasn't said yes.
-- **AI enhancements** (proposed 2026-07-10; user explicitly said to wait for
-  confirmation): ① activate the existing Gemini assistant (needs billing),
-  ② AI route explanations in LD-friendly wording, ③ landmark hints ("turn at
-  the 7-Eleven", cache by route hash), ④ HAPU EMA personalisation from
-  post-trip surveys (no API cost, no hardware), ⑤ LD Score formula upgraded
-  to the report spec. Recommended order if approved: ① → ② → ④.
+- **AI enhancements** (proposed 2026-07-10): ④ HAPU EMA **DONE 2026-07-21**
+  (user approved it via the Quick Survey request; K-Means clustering +
+  Collaborative Filtering cold-start remain future work needing more
+  users/trips). Still awaiting user confirmation: ① activate the existing
+  Gemini assistant (needs billing), ② AI route explanations in LD-friendly
+  wording, ③ landmark hints ("turn at the 7-Eleven", cache by route hash),
+  ⑤ LD Score formula upgraded to the report spec. Recommended order: ① → ②.
 - **Firmware (Arduino/ESP32)**: plan is now tracked as GitHub issues
   **#9–#13** (label `device`, milestone "Phase: Device (wristband)") —
   protocol contract FIRST (#9, `Sense&Safe/firmware/PROTOCOL.md`: UUIDs +
@@ -306,9 +315,10 @@ Repo root also holds `firestore.rules` + `firebase.json` (deploy with
 
 ## Tests / quality
 
-- `flutter analyze` clean; **31 tests** passing. Files: `profile_service_test`
+- `flutter analyze` clean; **42 tests** passing. Files: `profile_service_test`
   (scoring), `route_maneuver_test` (SAFETY: exhaustive maneuver→wrist),
   `route_progress_test` (geometry), `cue_scheduler_test` (cue order/dedupe),
+  `hapu_ema_test` (EMA math: exact deltas, convergence, clamps, no-FP-drift),
   `favourite_test` + `recent_trip_test` + `vibration_profile_test`
   (model round-trips), `widget_test` (boot smoke). Run `flutter test`.
 
