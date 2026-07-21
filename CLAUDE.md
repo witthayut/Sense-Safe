@@ -67,6 +67,13 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
 - ✅ **Device phase opened on GitHub**: label `device` + milestone
   "Phase: Device (wristband)" + issues **#9 protocol contract → #10 firmware
   skeleton → #11 AH024 motor → #12 real BLE in app → #13 sensors (stretch)**.
+- ✅ **Results screen redesign "v3" (2026-07-21)**: second user-supplied HTML
+  handoff implemented (same pattern as the Home "1a" one) — hero card with an
+  overall-confidence ring (CustomPainter), trait tags fed by the live profile,
+  5 dimension cards with Needs-support/Confident chips, reassurance callout,
+  two-line Done + outlined Retake. Behavior untouched (null guard, viewOnly
+  branching, retake reset); "What this means?" pill opens an explainer sheet.
+  New token: `AppColors.warnSoft`.
 - ✅ **HAPU EMA + Quick Survey (2026-07-21, = AI proposal ④)**: ending any
   drive shows the report's §3.3 five-question survey (big chips, skippable,
   friendly defaults). Q2/Q3 answers run the §3.4 EMA (α=0.3, `HapuEma` pure
