@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_navigation.dart';
 import '../../app/theme.dart';
 import '../../models/favourite.dart';
-import '../../models/recent_trip.dart';
 import '../../services/auth_controller.dart';
 import '../../services/ble_controller.dart';
 import '../../services/favourites_controller.dart';
 import '../../services/recent_trips_controller.dart';
 import '../../widgets/section_label.dart';
+import 'widgets/favourite_tile.dart';
+import 'widgets/hero_status_card.dart';
+import 'widgets/home_search_bar.dart';
+import 'widgets/recent_trip_card.dart';
+import 'widgets/resume_card.dart';
 
 /// Home tab — design "1a Readiness Hero": hero wristband status card,
 /// one-tap Resume last route, search, recent trips, and favourite tiles.
@@ -100,11 +104,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               const SizedBox(height: 18),
 
-              _HeroStatusCard(ble: ble),
+              HeroStatusCard(ble: ble),
 
               if (lastTrip != null) ...[
                 const SizedBox(height: 14),
-                _ResumeCard(
+                ResumeCard(
                   trip: lastTrip,
                   onTap: () => _routeTo(lastTrip.destination),
                 ),
@@ -112,7 +116,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               const SizedBox(height: 12),
 
-              _SearchBar(
+              HomeSearchBar(
                 controller: _search,
                 onSubmit: () => _routeTo(_search.text),
               ),
@@ -143,7 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     for (final trip in recents.take(2)) ...[
                       Expanded(
-                        child: _RecentTripCard(
+                        child: RecentTripCard(
                           trip: trip,
                           onTap: () => _routeTo(trip.destination),
                         ),
@@ -160,7 +164,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 11),
 
               if (favourites.isEmpty)
-                const _NoFavouritesHint()
+                const NoFavouritesHint()
               else
                 GridView.count(
                   crossAxisCount: 3,
@@ -171,7 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   childAspectRatio: 1.25,
                   children: [
                     for (final favourite in favourites)
-                      _FavouriteTile(
+                      FavouriteTile(
                         favourite: favourite,
                         onTap: () => _routeTo(favourite.destination),
                         onLongPress: () => _confirmRemove(favourite),
@@ -181,460 +185,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─── Hero wristband status card ───────────────────────────────────────────────
-
-class _HeroStatusCard extends StatelessWidget {
-  const _HeroStatusCard({required this.ble});
-
-  final BleState ble;
-
-  @override
-  Widget build(BuildContext context) {
-    final connected = ble.bothConnected;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment(-0.7, -1),
-            end: Alignment(0.7, 1),
-            colors: [AppColors.sageDark, AppColors.sageDeep],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Decorative flourish circle, clipped top-right.
-            Positioned(
-              right: -40,
-              top: -40,
-              child: Container(
-                width: 170,
-                height: 170,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.07),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.16),
-                        ),
-                        child: const Icon(Icons.watch,
-                            size: 24, color: AppColors.onSage),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              connected
-                                  ? 'Wristbands connected'
-                                  : 'Wristbands not connected',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              connected
-                                  ? 'Both bands · HAPU calibrated'
-                                  : 'Go to Devices tab to connect',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: Colors.white.withValues(alpha: 0.82),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        connected ? Icons.verified : Icons.bluetooth_disabled,
-                        size: 22,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ],
-                  ),
-                  if (connected) ...[
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _HeroBatteryChip(
-                              label: 'LEFT', pct: ble.left.batteryPct),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _HeroBatteryChip(
-                              label: 'RIGHT', pct: ble.right.batteryPct),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroBatteryChip extends StatelessWidget {
-  const _HeroBatteryChip({required this.label, required this.pct});
-
-  final String label;
-  final int? pct;
-
-  @override
-  Widget build(BuildContext context) {
-    final level = pct ?? 0;
-    final icon = level >= 80
-        ? Icons.battery_5_bar
-        : level >= 50
-            ? Icons.battery_4_bar
-            : level >= 20
-                ? Icons.battery_2_bar
-                : Icons.battery_alert;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.75),
-            ),
-          ),
-          const SizedBox(height: 3),
-          Row(
-            children: [
-              Icon(icon, size: 15, color: AppColors.onSage),
-              const SizedBox(width: 6),
-              Text(
-                pct != null ? '$pct%' : '--',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Resume last route card ───────────────────────────────────────────────────
-
-class _ResumeCard extends StatelessWidget {
-  const _ResumeCard({required this.trip, required this.onTap});
-
-  final RecentTrip trip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.sageSoft, width: 1.5),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 24,
-                offset: Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.sageSoft,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: const Icon(Icons.replay,
-                    size: 24, color: AppColors.sageDark),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'RESUME LAST ROUTE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                        color: AppColors.inkSoft,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      trip.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.sageDark,
-                ),
-                child: const Icon(Icons.arrow_forward,
-                    size: 20, color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Search Bar ───────────────────────────────────────────────────────────────
-
-class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.controller, required this.onSubmit});
-
-  final TextEditingController controller;
-  final VoidCallback onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.search, color: AppColors.inkSoft, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => onSubmit(),
-              decoration: const InputDecoration(
-                hintText: 'Search a new destination',
-                hintStyle:
-                    TextStyle(color: AppColors.inkSoft, fontSize: 15),
-                border: InputBorder.none,
-              ),
-            ),
-          ),
-          Material(
-            color: AppColors.sageDark,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onSubmit,
-              child: const SizedBox(
-                width: 40,
-                height: 40,
-                child: Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Recent trip card ─────────────────────────────────────────────────────────
-
-class _RecentTripCard extends StatelessWidget {
-  const _RecentTripCard({required this.trip, required this.onTap});
-
-  final RecentTrip trip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(13, 13, 13, 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.line),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.history, size: 20, color: AppColors.sageDark),
-              const SizedBox(height: 8),
-              Text(
-                trip.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.ink,
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                trip.metaText(DateTime.now()),
-                style:
-                    const TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Favourite tile ───────────────────────────────────────────────────────────
-
-class _FavouriteTile extends StatelessWidget {
-  const _FavouriteTile({
-    required this.favourite,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  final Favourite favourite;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  IconData get _icon {
-    final l = favourite.label.toLowerCase();
-    if (l.contains('home') || l.contains('บ้าน')) return Icons.home_outlined;
-    if (l.contains('work') || l.contains('งาน')) return Icons.work_outline;
-    if (l.contains('school') ||
-        l.contains('university') ||
-        l.contains('มอ') ||
-        l.contains('โรงเรียน')) {
-      return Icons.school_outlined;
-    }
-    return Icons.place_outlined;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Container(
-          padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.line),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(_icon, size: 22, color: AppColors.sageDark),
-              const SizedBox(height: 7),
-              Text(
-                favourite.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Empty favourites hint ────────────────────────────────────────────────────
-
-class _NoFavouritesHint extends StatelessWidget {
-  const _NoFavouritesHint();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.star_border, color: AppColors.inkSoft, size: 22),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'No favourites yet — search a route, then tap the star to '
-              'save it here.',
-              style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
-            ),
-          ),
-        ],
       ),
     );
   }
