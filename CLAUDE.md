@@ -159,8 +159,12 @@ check questions.
   ⑤ LD Score formula upgraded to the report spec. Recommended order: ① → ②.
 - **Firmware (Arduino/ESP32)**: plan is now tracked as GitHub issues
   **#9–#13** (label `device`, milestone "Phase: Device (wristband)") —
-  protocol contract FIRST (#9, `Sense&Safe/firmware/PROTOCOL.md`: UUIDs +
-  7-byte packet; firmware never goes inside `lib/`). Hardware set confirmed
+  protocol contract FIRST (#9, `firmware/PROTOCOL.md` — repo-root relative,
+  i.e. `haptic_drive/firmware/`, which is `Sense-Safe/firmware/` on GitHub.
+  NOT the outer `Sense&Safe/` folder: that is **not** a git repo, so anything
+  put there is untracked and never reaches teammates. App + firmware share the
+  7-byte packet, so they stay in ONE repo and change in one commit.
+  Firmware never goes inside `lib/`). Hardware set confirmed
   2026-07-14 (PROJECT_BRIEF ★★ table): ESP32-C3 Super Mini ×2, MPU-6050,
   GY-MAX30102, **AH024 PWM motor** (intensity = PWM duty 0-255), AA477 +
   LiPo. App impact: none — `pulse(intensity, durationMs)` maps to (duty, ms).
