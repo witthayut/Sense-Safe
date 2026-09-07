@@ -102,7 +102,7 @@ firmware/
 
 ## ความเชื่อมโยงกับฝั่งแอป
 
-ตอนนี้แอปยังใช้ BLE จำลองอยู่ที่ [`lib/services/ble_controller.dart`](../lib/services/ble_controller.dart)
+ตอนนี้แอปยังใช้ BLE จำลองอยู่ที่ [`lib/services/ble_controller.dart`](../app/lib/services/ble_controller.dart)
 เมธอดที่ firmware ต้องรองรับมีแค่สองตัว:
 
 ```dart
@@ -111,7 +111,7 @@ testVibration(wrist, intensity)                      // ปุ่ม Test บน
 ```
 
 `intensity` ฝั่ง Dart เป็น `0.0–1.0` → ฝั่ง firmware แปลงเป็น **PWM duty `0–255`**
-(ตามที่บันทึกไว้ใน `PROJECT_BRIEF.md` หัวข้อ ★★)
+(ตามที่บันทึกไว้ใน `../report/PROJECT_BRIEF.md` หัวข้อ ★★)
 
-รูปแบบการสั่นจริงของแต่ละ cue อยู่ที่ [`lib/services/haptic_cue_player.dart`](../lib/services/haptic_cue_player.dart)
+รูปแบบการสั่นจริงของแต่ละ cue อยู่ที่ [`lib/services/haptic_cue_player.dart`](../app/lib/services/haptic_cue_player.dart)
 — `motor_test.ino` เล่นแพตเทิร์นชุดเดียวกันนี้ให้ลองรู้สึกดูบนฮาร์ดแวร์จริง
