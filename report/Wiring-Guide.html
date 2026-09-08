@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Sense&amp;Safe — Wiring Reference</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Leelawadee UI", "Sarabun", Tahoma, sans-serif;
+    font-size: 10.5pt; line-height: 1.65; color: #16262B; margin: 0;
+  }
+  h1 { font-size: 19pt; margin: 0 0 2mm; letter-spacing: -.2px; }
+  .sub { color: #5C7176; font-size: 9.5pt; margin: 0 0 1mm; }
+  .rule { border: 0; border-top: 2px solid #16262B; margin: 3mm 0 5mm; }
+  h2 {
+    font-size: 12.5pt; margin: 6mm 0 2mm; color: #0E6A64;
+    border-bottom: 1px solid #C9DBD9; padding-bottom: 1.5mm;
+  }
+  h2 .n {
+    display: inline-block; background: #0E6A64; color: #fff;
+    width: 6.5mm; height: 6.5mm; line-height: 6.5mm; text-align: center;
+    border-radius: 2px; font-size: 10pt; margin-right: 2mm;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 10pt; }
+  th {
+    background: #EDF3F2; text-align: left; padding: 1.6mm 2.5mm;
+    border: 1px solid #C9DBD9; font-weight: 600; font-size: 9.5pt;
+  }
+  td { padding: 1.6mm 2.5mm; border: 1px solid #DCE6E5; vertical-align: top; }
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 9.5pt;
+    background: #F1F5F4; padding: .4mm 1.2mm; border-radius: 2px;
+  }
+  .pin { font-weight: 700; color: #0E6A64; }
+  .no  { color: #A93E28; font-weight: 600; }
+  .note { color: #5C7176; font-size: 9pt; }
+  .warn {
+    background: #FBF0ED; border-left: 3px solid #A93E28;
+    padding: 2.5mm 3.5mm; margin: 3mm 0; font-size: 9.5pt;
+  }
+  .warn b { color: #A93E28; }
+  pre {
+    background: #F1F5F4; border: 1px solid #DCE6E5; border-radius: 2px;
+    padding: 2.5mm 3.5mm; font-family: Consolas, monospace; font-size: 9pt;
+    line-height: 1.5; margin: 2mm 0 3mm; white-space: pre;
+  }
+  .addr { background: #E7F1F0; padding: 1.5mm 3mm; display: inline-block;
+          border-radius: 2px; font-size: 9.5pt; margin-bottom: 2mm; }
+  table, pre { page-break-inside: avoid; }
+  h2 { page-break-after: avoid; }
+  footer { margin-top: 6mm; padding-top: 2mm; border-top: 1px solid #DCE6E5;
+           color: #8CA3A5; font-size: 8.5pt; }
+</style>
+</head>
+<body>
+
+<h1>คู่มือการต่อสาย — สายรัดข้อมือ Sense&amp;Safe</h1>
+<p class="sub">บอร์ด ESP32-C3 Super Mini &nbsp;·&nbsp; AH024 + GY-MAX30102 + MPU-6050</p>
+<p class="sub">โครงการ Sense&amp;Safe — LD Haptic Drive Assistant &nbsp;·&nbsp; คณะ ICT มหาวิทยาลัยมหิดล &nbsp;·&nbsp; 8 ก.ย. 2569</p>
+<hr class="rule">
+
+<div class="warn">
+<b>ถอดสาย USB ออกก่อนต่อสายทุกครั้ง</b> — ต่อให้เสร็จหมดแล้วค่อยเสียบไฟ
+การต่อสายขณะมีไฟ ถ้าพลาดไปแตะขาผิดจังหวะเดียวบอร์ดพังได้
+</div>
+
+<h2><span class="n">1</span>มอเตอร์สั่น AH024 &rarr; ESP32-C3</h2>
+<table>
+<tr><th style="width:22%">ขาบน AH024</th><th style="width:20%">ขาบน ESP32-C3</th><th>หมายเหตุ</th></tr>
+<tr><td><code>VCC</code> / <code>+</code></td><td class="pin">5V</td>
+    <td>ห้ามใช้ 3V3 — มอเตอร์กินไฟกระชากตอนออกตัว จะทำให้บอร์ดรีเซ็ตตัวเอง</td></tr>
+<tr><td><code>GND</code> / <code>&minus;</code></td><td class="pin">G</td><td></td></tr>
+<tr><td><code>IN</code> / <code>SIG</code> / <code>S</code></td><td class="pin">GPIO4</td>
+    <td>สัญญาณ PWM — ผ่านการทดสอบบนข้อมือจริงแล้ว</td></tr>
+</table>
+<p class="note">ขาสัญญาณเป็น 3.3V แต่สั่งงานโมดูลได้ปกติ เพราะ AH024 มีทรานซิสเตอร์ขับในตัว</p>
+
+<h2><span class="n">2</span>เซ็นเซอร์ชีพจร GY-MAX30102 &rarr; ESP32-C3</h2>
+<div class="addr">ที่อยู่ I2C = <code>0x57</code></div>
+<table>
+<tr><th style="width:22%">ขาบนโมดูล</th><th style="width:20%">ขาบน ESP32-C3</th><th>หมายเหตุ</th></tr>
+<tr><td><code>VIN</code></td><td class="pin">3V3</td>
+    <td><span class="no">ห้ามใช้ 5V</span> — ชิปทำงานที่ 1.8/3.3V</td></tr>
+<tr><td><code>GND</code></td><td class="pin">G</td><td></td></tr>
+<tr><td><code>SDA</code></td><td class="pin">GPIO6</td><td></td></tr>
+<tr><td><code>SCL</code></td><td class="pin">GPIO7</td><td></td></tr>
+<tr><td><code>INT</code></td><td class="note">ไม่ต่อ</td><td>โปรแกรมใช้วิธี polling ไม่ต้องใช้ขานี้</td></tr>
+</table>
+
+<h2><span class="n">3</span>เซ็นเซอร์การเคลื่อนไหว MPU-6050 &rarr; ESP32-C3</h2>
+<div class="addr">ที่อยู่ I2C = <code>0x68</code></div>
+<table>
+<tr><th style="width:22%">ขาบนโมดูล</th><th style="width:20%">ขาบน ESP32-C3</th><th>หมายเหตุ</th></tr>
+<tr><td><code>VCC</code></td><td class="pin">3V3</td>
+    <td>บอร์ดรับได้ 3–5V แต่ใช้ 3V3 เพื่อให้ระดับลอจิกตรงกับ ESP32</td></tr>
+<tr><td><code>GND</code></td><td class="pin">G</td><td></td></tr>
+<tr><td><code>SDA</code></td><td class="pin">GPIO6</td><td></td></tr>
+<tr><td><code>SCL</code></td><td class="pin">GPIO7</td><td></td></tr>
+<tr><td><code>AD0</code></td><td class="note">ไม่ต่อ</td>
+    <td>ปล่อยลอย = <code>0x68</code> · ถ้าต่อเข้า 3V3 จะเปลี่ยนเป็น <code>0x69</code></td></tr>
+<tr><td><code>XDA</code> <code>XCL</code> <code>INT</code></td><td class="note">ไม่ต่อ</td><td>ไม่ได้ใช้ในโปรเจกต์นี้</td></tr>
+</table>
+
+<h2><span class="n">4</span>ต่อรวมทุกอุปกรณ์ &rarr; ESP32-C3</h2>
+<table>
+<tr><th style="width:20%">ขาบน ESP32-C3</th><th style="width:52%">ต่อไปที่</th><th style="width:14%">จำนวนเส้น</th></tr>
+<tr><td class="pin">5V</td><td>AH024 <code>VCC</code></td><td>1</td></tr>
+<tr><td class="pin">3V3</td><td>MAX30102 <code>VIN</code> + MPU-6050 <code>VCC</code></td><td><b>2</b></td></tr>
+<tr><td class="pin">G</td><td>AH024 <code>GND</code> + MAX30102 <code>GND</code> + MPU-6050 <code>GND</code></td><td><b>3</b></td></tr>
+<tr><td class="pin">GPIO4</td><td>AH024 <code>IN</code></td><td>1</td></tr>
+<tr><td class="pin">GPIO6</td><td>MAX30102 <code>SDA</code> + MPU-6050 <code>SDA</code></td><td><b>2</b></td></tr>
+<tr><td class="pin">GPIO7</td><td>MAX30102 <code>SCL</code> + MPU-6050 <code>SCL</code></td><td><b>2</b></td></tr>
+</table>
+
+<h2 style="border:0;color:#16262B;font-size:11pt">ต้องใช้รางไฟของ breadboard</h2>
+<p class="note" style="margin-top:0">ESP32-C3 Super Mini มีขา <code>3V3</code> และ <code>G</code> อย่างละ
+<b>ขาเดียว</b> แต่ต้องจ่าย 3V3 สองเส้นและ GND สามเส้น จึงต้องกระจายผ่านรางไฟ
+— อย่าพยายามยัดสายหลายเส้นเข้ารูเดียว</p>
+<pre>ESP32  3V3 ──→ รางบวก (+) ──┬──→ MAX30102  VIN
+                            └──→ MPU-6050  VCC
+
+ESP32  G   ──→ รางลบ (−)  ──┬──→ AH024     GND
+                            ├──→ MAX30102  GND
+                            └──→ MPU-6050  GND</pre>
+
+<h2 style="border:0;color:#16262B;font-size:11pt">เซ็นเซอร์สองตัวใช้สาย SDA / SCL ร่วมกันได้</h2>
+<p class="note" style="margin-top:0">I2C ออกแบบมาให้อุปกรณ์หลายตัวต่อขนานบนสายคู่เดียว
+โดยแยกกันด้วยที่อยู่ — <code>0x57</code> กับ <code>0x68</code> <b>ไม่ชนกัน</b>
+ต่อขนานเข้า GPIO6 / GPIO7 ได้เลย ตัวสแกน I2C ในโปรแกรมจะเห็นทั้งสองตัว</p>
+
+<h2 style="border:0;color:#16262B;font-size:11pt">แผนที่ขาหลังต่อครบ</h2>
+<table>
+<tr><th style="width:26%">ขา</th><th>สถานะ</th></tr>
+<tr><td class="pin">GPIO4</td><td>ใช้แล้ว — มอเตอร์สั่น</td></tr>
+<tr><td class="pin">GPIO6 / GPIO7</td><td>ใช้แล้ว — I2C (เซ็นเซอร์ทั้งสองตัว)</td></tr>
+<tr><td class="no">GPIO8</td><td class="no">ห้ามใช้ — ไฟ LED บนบอร์ด และเป็น strapping pin</td></tr>
+<tr><td class="no">GPIO9</td><td class="no">ห้ามใช้ — ปุ่ม BOOT</td></tr>
+<tr><td>GPIO0 1 2 3 5 10 20 21</td><td class="note">ว่าง</td></tr>
+</table>
+
+<div class="warn">
+<b>ทำไมต้องย้าย I2C มาที่ GPIO6 / GPIO7</b><br>
+ค่าเริ่มต้นของบอร์ดนี้คือ GPIO8 / GPIO9 แต่ทั้งคู่เป็นขาพิเศษ — GPIO8 ต่อกับไฟ LED
+บนบอร์ด ส่วน GPIO9 คือปุ่ม BOOT <b>ถ้าเซ็นเซอร์ดึง GPIO9 ลงจังหวะที่บอร์ดกำลังบูต
+บอร์ดจะเข้าโหมดแฟลชแทนที่จะรันโปรแกรม</b> ซึ่งเป็นอาการที่หาสาเหตุยากมาก
+เพราะดูเหมือนบอร์ดเสีย ทั้งที่จริงแค่ต่อผิดขา
+</div>
+
+<div class="warn" style="background:#FBF7ED;border-left-color:#B8860B">
+<b>ก่อนเสียบ USB ทุกครั้ง</b> — ตรวจว่าไม่มีลวดทองแดงโผล่มาแตะกัน โดยเฉพาะ
+<code>5V</code> กับ <code>G</code> ซึ่งอยู่ติดกันบนบอร์ด เส้นเดียวเกยกัน = ไฟฟ้าลัดวงจรตรงจาก USB
+</div>
+
+<footer>
+Sense&amp;Safe — LD Haptic Drive Assistant &nbsp;·&nbsp; ธีทัต ธีรสถาพรกุล · วิธยุตม์ พิชรานันท์ · ณัฐฐนิตา อิงคากุล<br>
+เอกสารนี้อธิบายการต่อสายของ<b>ต้นแบบจริง</b> ซึ่งต่างจากบทที่ 2.8 ของรายงาน
+ที่ยังระบุ DRV2605L + LRA Motor ตามสเปคทฤษฎีเดิม
+</footer>
+
+</body>
+</html>

@@ -164,6 +164,7 @@ void setup() {
 const byte RATE_SIZE = 4;          // average over the last 4 beats
 byte  rates[RATE_SIZE];
 byte  rateSpot   = 0;
+byte  rateCount  = 0;              // slots filled so far; avg is meaningless before RATE_SIZE
 long  lastBeat   = 0;
 float bpm        = 0;
 int   bpmAvg     = 0;
@@ -182,9 +183,13 @@ void loop() {
     if (bpm > 20 && bpm < 255) {            // drop obvious glitches
       rates[rateSpot++] = (byte)bpm;
       rateSpot %= RATE_SIZE;
+      if (rateCount < RATE_SIZE) rateCount++;
+      // Average only the slots that hold a real beat. Averaging the empty
+      // (zero) slots too, as SparkFun's example does, reads ~35-50 BPM for
+      // the first few seconds and looks like a real low pulse.
       bpmAvg = 0;
-      for (byte i = 0; i < RATE_SIZE; i++) bpmAvg += rates[i];
-      bpmAvg /= RATE_SIZE;
+      for (byte i = 0; i < rateCount; i++) bpmAvg += rates[i];
+      bpmAvg /= rateCount;
     }
     led(true);
     ledOffAt = millis() + 60;
@@ -196,7 +201,8 @@ void loop() {
   if (millis() - lastPrint >= 250) {
     lastPrint = millis();
     Serial.printf("   IR=%6ld  RED=%6ld  BPM=%5.1f  avg=%3d", ir, red, bpm, bpmAvg);
-    if (ir < CONTACT_THRESHOLD) Serial.print("   (no contact)");
+    if (ir < CONTACT_THRESHOLD)        Serial.print("   (no contact)");
+    else if (rateCount < RATE_SIZE)    Serial.print("   (warming up - ignore avg)");
     Serial.println();
   }
 }
