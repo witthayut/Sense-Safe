@@ -258,7 +258,7 @@ class DriveController extends Notifier<DriveState> {
         if (tap != null) {
           unawaited(
             HapticCuePlayer(ref.read(bleControllerProvider.notifier))
-                .playApproachTap(wrist, tap),
+                .playApproachTap(wrist, tap, profile),
           );
         }
       }

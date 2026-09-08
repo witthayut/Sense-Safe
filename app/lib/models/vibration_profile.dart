@@ -25,7 +25,14 @@ class VibrationProfile {
     required this.leadTimeSeconds,
     required this.rhythm,
     required this.spatialType,
+    this.floorIntensity = defaultFloorIntensity,
   });
+
+  /// Shipped default until the wearer calibrates: 0.42 = duty 185, the
+  /// weakest level confirmed usable on a real wrist (firmware/MEASUREMENTS.md).
+  /// It is NOT the 135 perception floor — that was measured sitting still and
+  /// concentrating, and is too quiet to rely on in a moving car.
+  static const double defaultFloorIntensity = 0.42;
 
   /// support-need score per dimension, 0.0 .. 1.0
   final Map<ProfileDimension, double> scores;
@@ -41,12 +48,18 @@ class VibrationProfile {
   /// A friendly classification label, e.g. "Dyspraxia-leaning".
   final String spatialType;
 
+  /// The weakest intensity THIS wearer can actually feel, measured by the
+  /// Test Vibration screen. Nothing below this should ever be sent: it would
+  /// not be a gentle cue, it would be silence the app mistakes for a cue.
+  final double floorIntensity;
+
   /// New profile with some tuning values replaced — used by the Settings
   /// screen so user adjustments never touch the assessment scores/label.
   VibrationProfile copyWith({
     double? intensity,
     int? leadTimeSeconds,
     HapticRhythm? rhythm,
+    double? floorIntensity,
   }) =>
       VibrationProfile(
         scores: scores,
@@ -54,6 +67,7 @@ class VibrationProfile {
         leadTimeSeconds: leadTimeSeconds ?? this.leadTimeSeconds,
         rhythm: rhythm ?? this.rhythm,
         spatialType: spatialType,
+        floorIntensity: floorIntensity ?? this.floorIntensity,
       );
 
   double scoreFor(ProfileDimension d) => scores[d] ?? 0.0;
@@ -72,6 +86,7 @@ class VibrationProfile {
         'leadTimeSeconds': leadTimeSeconds,
         'rhythm': rhythm.name,
         'spatialType': spatialType,
+        'floorIntensity': floorIntensity,
       };
 
   static VibrationProfile? fromFirestore(Map<String, dynamic>? data) {
@@ -92,6 +107,8 @@ class VibrationProfile {
       leadTimeSeconds: (data['leadTimeSeconds'] as num?)?.toInt() ?? 3,
       rhythm: rhythm,
       spatialType: data['spatialType'] as String? ?? 'Balanced profile',
+      floorIntensity: (data['floorIntensity'] as num?)?.toDouble() ??
+          defaultFloorIntensity,
     );
   }
 }

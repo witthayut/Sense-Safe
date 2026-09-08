@@ -10,7 +10,7 @@ import '../../widgets/pill_button.dart';
 
 /// Human-friendly label per pulse, from softest to strongest. Parallel to the
 /// 5 patterns; purely cosmetic (the intensity ramp lives in the controller).
-const List<String> _pulseLabels = ['Soft', 'Light', 'Medium', 'Strong', 'Max'];
+const List<String> _pulseLabels = ['Softest', 'Soft', 'Medium', 'Strong', 'Max'];
 
 /// "Test Vibration" — cold-start calibration for a single wrist.
 ///
@@ -34,8 +34,7 @@ class TestVibrationScreen extends ConsumerWidget {
     final ble = ref.watch(bleControllerProvider);
     final band = _isLeft ? ble.left : ble.right;
 
-    final mapped = state.mappedFor(wrist);
-    final count = state.countFor(wrist);
+    final selected = state.floorFor(wrist);
     final complete = state.isCompleteFor(wrist);
 
     return Scaffold(
@@ -58,8 +57,7 @@ class TestVibrationScreen extends ConsumerWidget {
                 _ConnectionStatus(band: band),
                 const SizedBox(height: 18),
                 _CalibrationCard(
-                  mapped: mapped,
-                  count: count,
+                  selected: selected,
                   onPulse: (i) => _pulse(context, ref, i),
                 ),
                 const SizedBox(height: 20),
@@ -88,7 +86,7 @@ class TestVibrationScreen extends ConsumerWidget {
   Future<void> _pulse(BuildContext context, WidgetRef ref, int index) async {
     final ok = await ref
         .read(calibrationControllerProvider.notifier)
-        .mapPattern(wrist, index);
+        .selectFloor(wrist, index);
     if (ok || !context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -137,13 +135,12 @@ class _ConnectionStatus extends StatelessWidget {
 /// buttons + the progress bar and "x/5 patterns mapped" counter.
 class _CalibrationCard extends StatelessWidget {
   const _CalibrationCard({
-    required this.mapped,
-    required this.count,
+    required this.selected,
     required this.onPulse,
   });
 
-  final Set<int> mapped;
-  final int count;
+  /// Index of the weakest level the wearer says they can feel, or null.
+  final int? selected;
   final ValueChanged<int> onPulse;
 
   @override
@@ -183,11 +180,12 @@ class _CalibrationCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Cold-start calibration',
+                      Text('Find your softest buzz',
                           style: TextStyle(
                               fontWeight: FontWeight.w700, fontSize: 15)),
                       SizedBox(height: 2),
-                      Text('Tap each pulse you feel clearly',
+                      Text('Try them from the left. Tap the weakest one you '
+                          'can still feel.',
                           style: TextStyle(
                               color: AppColors.inkSoft, fontSize: 13)),
                     ],
@@ -203,7 +201,7 @@ class _CalibrationCard extends StatelessWidget {
                   Expanded(
                     child: _PulseButton(
                       label: _pulseLabels[i],
-                      mapped: mapped.contains(i),
+                      mapped: selected == i,
                       onTap: () => onPulse(i),
                     ),
                   ),
@@ -213,18 +211,13 @@ class _CalibrationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: count / kCalibrationPatternCount,
-                minHeight: 6,
-                backgroundColor: AppColors.surfaceMuted,
-                color: AppColors.sageDark,
-              ),
+            Text(
+              selected == null
+                  ? 'Nothing chosen yet'
+                  : 'Your softest: ${_pulseLabels[selected!]} — everything '
+                      'this app sends will be at least this strong',
+              style: const TextStyle(color: AppColors.inkSoft, fontSize: 13),
             ),
-            const SizedBox(height: 12),
-            Text('$count/$kCalibrationPatternCount patterns mapped',
-                style: const TextStyle(color: AppColors.inkSoft, fontSize: 13)),
           ],
         ),
       ),

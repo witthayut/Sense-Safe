@@ -187,7 +187,7 @@ check questions.
   Still unknown: whether parts are physically in hand yet. Waiting for the
   user to say "start #9".
 
-## 🔴 Hardware measured 2026-09-08 — six app bugs confirmed by it
+## Hardware measured 2026-09-08 — six app bugs found, five closed
 
 The wristband hardware works end to end (ESP32-C3 + AH024 over PWM). Measuring
 it on a real wrist produced one number that invalidates several app defaults:
@@ -198,17 +198,22 @@ motor is not weak, it is *silent*. Full record + method in
 
 Everything below sends the band a value it physically cannot render:
 
-| File | Line | Produces | Result |
-|---|---|---|---|
-| `app/lib/services/calibration_controller.dart` | 57 | levels 1-2 of 5 = 0.30 / 0.475 | 🔴 two of five onboarding levels are silent |
-| `app/lib/services/calibration_controller.dart` | 65 | `mapPattern` marks "mapped" when the packet was *sent* | 🔴 success ≠ the user felt anything |
-| `app/lib/services/profile_service.dart` | 70 | `0.35 + overall*0.5`, silent when `overall < 0.36` | 🔴 the assessment hands mild-LD users a dead profile |
-| `app/lib/services/haptic_cue_player.dart` | 31 | PREP = intensity × 0.5 | 🔴 PREP can never be felt |
-| `app/lib/services/hapu_ema.dart` | 30 | `minIntensity = 0.1` | 🟠 HAPU can tune a band to silence over trips |
-| `app/lib/features/settings/settings_screen.dart` | 105 | slider `min: 0.1` | 🟠 ~48% of the slider does nothing |
+| Bug | Status |
+|---|---|
+| Calibration levels 1-2 were 0.30 / 0.475 — silent | ✅ levels now span 0.0-1.0 (duty 135-255) |
+| `mapPattern` marked "mapped" when the packet was merely *sent* | ✅ the wearer's tap IS the measurement now |
+| The assessment could hand mild-LD users a profile under the floor | ✅ clamped at play time by `floorIntensity` |
+| PREP was intensity × 0.5, arithmetically below the floor | ✅ PREP is its own tested constant (0.42) |
+| `hapu_ema` clamped at 0.1 — could tune a band to silence | ✅ clamps at the wearer's measured floor |
+| Settings slider starts at 0.1, ~48% of it inert | 🟠 **still open** — output is clamped so nothing goes silent, but the control still lies about its range |
 
-**Agreed fix (do NOT hardcode 0.53 in the app):** the firmware owns the
-mapping, because the floor is a property of the motor, not of the app —
+**Two different floors, do not conflate them.** The HARDWARE floor (135) is
+what the motor physically cannot go below — that belongs to firmware. The
+PERSONAL floor is what a given wearer can feel, which sits at or above it and
+is now measured by the Test Vibration screen into
+`VibrationProfile.floorIntensity` (default 0.42 = duty 185, the weakest level
+confirmed usable). The app never asks for less than the personal floor; the
+firmware maps whatever it asks for onto the motor's range —
 
 ```
 duty = FLOOR + intensity × (255 − FLOOR)

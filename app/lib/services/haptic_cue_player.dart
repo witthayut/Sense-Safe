@@ -41,6 +41,11 @@ class HapticCuePlayer {
   /// One tap of the approach ladder.
   static const int approachTapMs = 350;
 
+  /// Never let anything go out below the wearer's measured floor: under it a
+  /// cue is not gentle, it is silence the app would report as delivered.
+  double _atLeastFloor(double v, VibrationProfile profile) =>
+      v < profile.floorIntensity ? profile.floorIntensity : v;
+
   List<_Pulse> _patternFor(CueStage stage, VibrationProfile profile) {
     final i = profile.intensity.clamp(0.0, 1.0);
     switch (stage) {
@@ -78,8 +83,16 @@ class HapticCuePlayer {
   }
 
   /// One tap from the approach ladder. Same wrist rules as any other cue.
-  Future<void> playApproachTap(Wrist wrist, double intensity) =>
-      _ble.pulse(wrist, intensity: intensity, durationMs: approachTapMs);
+  Future<void> playApproachTap(
+    Wrist wrist,
+    double intensity,
+    VibrationProfile profile,
+  ) =>
+      _ble.pulse(
+        wrist,
+        intensity: _atLeastFloor(intensity, profile),
+        durationMs: approachTapMs,
+      );
 
   /// Play a turn cue on one wrist. Fire-and-forget from the engine's tick.
   Future<void> playCue(
@@ -88,7 +101,8 @@ class HapticCuePlayer {
     VibrationProfile profile,
   ) async {
     for (final p in _patternFor(stage, profile)) {
-      await _ble.pulse(wrist, intensity: p.intensity, durationMs: p.durationMs);
+      final level = _atLeastFloor(p.intensity, profile);
+      await _ble.pulse(wrist, intensity: level, durationMs: p.durationMs);
       if (p.gapMs > 0) {
         await Future<void>.delayed(Duration(milliseconds: p.gapMs));
       }
