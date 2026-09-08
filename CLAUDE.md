@@ -1,14 +1,32 @@
-# Haptic Drive — project context
+# Sense&Safe — project context
 
 This file is read automatically by Claude Code at the start of each session.
 It captures architecture, conventions, and current build status — keep it
 updated as work progresses so future sessions don't have to re-derive state.
 
 > 📌 **For the full product vision** (hardware BOM, 6-layer AI architecture,
-> target users, competitors) see **`../PROJECT_BRIEF.md`** one level up —
-> a quick-reference summary of the official project report (`Sense&Safe.pdf`).
-> This file covers the **Flutter app** specifically: what's actually built,
-> vs. the full vision described there.
+> target users, competitors) see **`report/PROJECT_BRIEF.md`** — a
+> quick-reference digest of the official report (`report/SenseSafe-Report.pdf`).
+> Most of THIS file covers the **Flutter app** in `app/`: what is actually
+> built, versus the full vision described there.
+
+## Repo layout (restructured 2026-09-07)
+
+This repository is the whole project, not just the app. One root, six folders:
+
+```
+Sense&Safe/            ← git root = github.com/witthayut/Sense-Safe
+  app/                  Flutter app (phone)      — was the old haptic_drive/
+  firmware/             Arduino (ESP32-C3 wristbands)
+  report/               the report submitted to the advisor + PROJECT_BRIEF
+  research/             evidence from real users (interviews, findings)
+  planning/             tech plan, QA checklist, reviews/
+  media/                images
+```
+
+Before this, the outer folder was NOT a repo and only the app was versioned,
+so the report and research had no backup at all. If you ever see a path
+containing `haptic_drive/`, it is stale — that folder no longer exists.
 
 ## What this project is
 
@@ -21,7 +39,7 @@ tunes buzz intensity, lead time, and rhythm.
 
 The app you're working in is a **prototype/scaffold** of a much larger vision
 (dashcam object detection, stress-adaptive haptics, voice control — see
-`PROJECT_BRIEF.md`); only the pieces below are actually built so far.
+`report/PROJECT_BRIEF.md`); only the pieces below are actually built so far.
 
 ## Stack
 
@@ -109,8 +127,8 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
    `BleController` API; `pulse()` becomes the 7-byte packet write. Hardware:
    ESP32-C3 Super Mini ×2 + AH024 PWM motor etc. (PROJECT_BRIEF ★★ table).
 
-See `HapticDrive_Tech_Plan.md` and `PROJECT_BRIEF.md` (one level up) for the
-full long-term plan beyond this app scaffold.
+See `planning/Tech-Plan.md` and `report/PROJECT_BRIEF.md` for the full
+long-term plan beyond this app scaffold.
 
 ## Working mode — BUILD + EXPLAIN (updated 2026-07-15)
 
@@ -159,8 +177,10 @@ check questions.
   ⑤ LD Score formula upgraded to the report spec. Recommended order: ① → ②.
 - **Firmware (Arduino/ESP32)**: plan is now tracked as GitHub issues
   **#9–#13** (label `device`, milestone "Phase: Device (wristband)") —
-  protocol contract FIRST (#9, `Sense&Safe/firmware/PROTOCOL.md`: UUIDs +
-  7-byte packet; firmware never goes inside `lib/`). Hardware set confirmed
+  protocol contract FIRST (#9, `firmware/PROTOCOL.md` at the repo root,
+  beside `app/`. App + firmware share the 7-byte packet, so they live in ONE
+  repo and change in one commit; firmware never goes inside `app/lib/`).
+  Hardware set confirmed
   2026-07-14 (PROJECT_BRIEF ★★ table): ESP32-C3 Super Mini ×2, MPU-6050,
   GY-MAX30102, **AH024 PWM motor** (intensity = PWM duty 0-255), AA477 +
   LiPo. App impact: none — `pulse(intensity, durationMs)` maps to (duty, ms).
@@ -181,15 +201,15 @@ check questions.
 
 - **Firebase project**: `senseandsafe-8a030` (display "SenseAndSafe"). Auth =
   Email/Password. Firestore region **asia-southeast1**. Config in
-  `lib/firebase_options.dart` (+ `android/app/google-services.json`)
+  `app/lib/firebase_options.dart` (+ `app/android/app/google-services.json`)
   — safe to commit (Google config keys).
 - **Firestore security: per-user rules DEPLOYED 2026-07-15** (test mode is
-  gone). Rules live in `firestore.rules` (deployed via
+  gone). Rules live in `app/firestore.rules` (deployed via
   `firebase deploy --only firestore:rules`); verified by an unauthenticated
   REST probe: 404/allowed before → 403 PERMISSION_DENIED after. Each signed-in
   user can only read/write their own `users/{uid}` doc.
-- **Google Maps key** (ends `…mhLsvg`) is in `web/index.html`,
-  `android/app/src/main/AndroidManifest.xml`, and `lib/app/maps_config.dart`.
+- **Google Maps key** (ends `…mhLsvg`) is in `app/web/index.html`,
+  `app/android/app/src/main/AndroidManifest.xml`, and `app/lib/app/maps_config.dart`.
   It IS **API-restricted** to 4 APIs (Maps JS, Maps SDK Android, Directions,
   Places). On **free trial** (no auto-charge; ฿10 budget alert set). Repo is
   **private**, so committing it is acceptable for now.
@@ -234,15 +254,15 @@ flutter run -d chrome      # or omit -d for a device/emulator
   and **hard-refresh** the browser (`Ctrl+Shift+R`).
 - Installed skills: `start-system`, `grilling`/`grill-me`, `check-project`,
   `check-architecture`.
-- **Reading PDFs** (e.g. `../Sense&Safe.pdf`): Poppler is installed via winget
+- **Reading PDFs** (e.g. `report/SenseSafe-Report.pdf`): Poppler is installed via winget
   but NOT on PATH — use the binaries directly at
   `%LOCALAPPDATA%\Microsoft\WinGet\Packages\oschwartz10612.Poppler_*\poppler-25.07.0\Library\bin`
   (`pdftotext -layout` works well; extracted text of the report is Thai).
 
-## Architecture (lib/)
+## Architecture (app/lib/)
 
 ```
-lib/
+app/lib/
   main.dart              app entry (ProviderScope + MaterialApp.router)
   firebase_options.dart  generated by flutterfire — never hand-edit
   app/                    router.dart, theme.dart (AppColors + TextTheme),
@@ -275,18 +295,18 @@ lib/
     assistant/              floating Gemini AI chat overlay
   widgets/                 pill_button, section_label, band_tile
 ```
-Repo root also holds `firestore.rules` + `firebase.json` (deploy with
-`firebase deploy --only firestore:rules`).
+`app/` also holds `firestore.rules` + `firebase.json` (run
+`firebase deploy --only firestore:rules` from inside `app/`).
 
-- One folder per feature under `lib/features/`.
+- One folder per feature under `app/lib/features/`.
 - **Screens are dumb** — they read/watch Riverpod providers. Business logic
-  and state live in `lib/services/` as `Notifier`s.
-- **ALL Riverpod controllers live in `lib/services/`** (decided 2026-07-06;
+  and state live in `app/lib/services/` as `Notifier`s.
+- **ALL Riverpod controllers live in `app/lib/services/`** (decided 2026-07-06;
   `assistant_controller` was moved there for consistency) — don't put
   controllers inside feature folders.
 - When a screen file grows past ~300 lines, split its private widgets into
   `features/<name>/widgets/` (see `routes/widgets/` as the template).
-- Theme colours come from `AppColors` in `lib/app/theme.dart` (sage-green
+- Theme colours come from `AppColors` in `app/lib/app/theme.dart` (sage-green
   palette, rounded "pill" buttons) — don't hard-code colours in screens.
 
 ## Key gotchas / decisions (don't re-discover these)
@@ -314,7 +334,7 @@ Repo root also holds `firestore.rules` + `firebase.json` (deploy with
   try/catch so tests don't crash.
 - **SAFETY INVARIANT — left/right cues**: the wrist side comes ONLY from
   Google's maneuver string via `wristForManeuver()` in
-  `models/route_maneuver.dart` (exhaustively tested). NEVER derive a side
+  `app/lib/models/route_maneuver.dart` (exhaustively tested). NEVER derive a side
   from bearing/geometry math, and never add a second mapping point.
   Ambiguous maneuvers (merge/straight/ferry) get NO haptic cue by design.
 - The cue logic is a pure class (`CueScheduler`) precisely so it's testable

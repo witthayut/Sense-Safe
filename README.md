@@ -1,73 +1,88 @@
-# Haptic Drive (Flutter)
+# Sense&Safe — LD Haptic Drive Assistant
 
-Felt turn-by-turn navigation for different learning styles. This is the
-**Phase 0 + Phase 1** scaffold: it runs end-to-end on **mock services**, so you
-don't need Firebase, Mapbox keys, or wristband hardware to see it working.
+> **นำทางขับรถด้วยการสั่นที่ข้อมือ แทนการมองจอและฟังเสียง**
+> ข้อมือซ้ายสั่น = เลี้ยวซ้าย · ยิ่งใกล้จุดเลี้ยว ยิ่งสั่นแรง
+> ออกแบบเพื่อผู้ที่มีภาวะบกพร่องทางการเรียนรู้ (LD)
 
-## What works right now
+กลุ่ม Sense&Safe — คณะ ICT มหาวิทยาลัยมหิดล
+ธีทัต ธีรสถาพรกุล · วิธยุตม์ พิชรานันท์ · ณัฐฐนิตา อิงคากุล
+อาจารย์ที่ปรึกษา: ผศ.ดร. ปรีชา ตั้งวรกิจถาวร
 
-- **Login / Register / Forgot password** (mock auth — any non-empty
-  username + password logs you in).
-- **Learning-difference picker** on Register; choosing "I'm not sure" routes
-  you into the assessment.
-- **6-question assessment** → scored into a **vibration profile** with
-  confidence bars and a friendly "spatial type" (never a diagnosis).
-- **Device onboarding + Devices tab** — simulated BLE scan/connect for the
-  left & right wristbands, with a working "Test vibration" button.
-- **Home** ("Where to today?"), **Profile** (shows your profile + logout),
-  and placeholder **Routes** tab.
+---
 
-## Run it
+## 📁 อะไรอยู่ตรงไหน
 
-You need the Flutter SDK installed (https://docs.flutter.dev/get-started/install).
+| โฟลเดอร์ | คืออะไร | เปิดเมื่อ |
+|---|---|---|
+| **`app/`** | แอปบนมือถือ (Flutter) | จะแก้หน้าจอ แก้ตรรกะแอป |
+| **`firmware/`** | โค้ดในสายรัดข้อมือ (Arduino / ESP32-C3) | จะแก้การสั่น การเชื่อม BLE |
+| **`report/`** | รายงานส่งอาจารย์ + สรุปย่อ | จะแก้รายงาน หรืออยากรู้ภาพรวมโปรเจกต์ |
+| **`research/`** | หลักฐานจากผู้ใช้จริง | จะไปสัมภาษณ์ หรือกลับมาดูผล |
+| **`planning/`** | แผนงาน แผนทดสอบ บันทึกการทบทวน | จะวางแผนขั้นต่อไป |
+| **`media/`** | รูปภาพ | ต้องใช้รูปประกอบ |
 
+**จำง่ายๆ:** `app` = ของที่รันบนมือถือ · `firmware` = ของที่รันบนสายรัด · ที่เหลือคือกระดาษ
+
+---
+
+## 🚀 เริ่มยังไง
+
+### รันแอป
 ```bash
-cd haptic_drive
+cd app
 flutter pub get
-flutter run            # pick a device/emulator, or use Chrome for a quick look
+flutter run -d chrome
+```
+หรือใช้คำสั่ง **`/start-system`** ใน Claude Code (เปิดที่ `localhost:8090`)
+
+### แฟลชสายรัดข้อมือ
+เปิด `firmware/test/motor_test/motor_test.ino` ด้วย Arduino IDE
+→ อ่านวิธีตั้งค่าบอร์ดและการต่อสายใน [`firmware/README.md`](firmware/README.md)
+
+### ตรวจสุขภาพโค้ด
+```bash
+cd app
+flutter analyze && flutter test
 ```
 
-Tip: `flutter run -d chrome` is the fastest way to view the UI without setting
-up an Android/iOS emulator.
+---
 
-## Project layout
+## 📌 ไฟล์ที่ควรอ่านก่อน
 
-```
-lib/
-  main.dart                  app entry (ProviderScope + MaterialApp.router)
-  app/
-    theme.dart               colours + Material 3 theme from the mockups
-    router.dart              go_router with auth redirect
-  models/                    AppUser, LearningDifference, survey, VibrationProfile, Wristband
-  services/                  mock auth, mock BLE, assessment + profile scoring (Riverpod)
-  features/
-    auth/                    login, register, forgot password
-    onboarding/              welcome + connect wristbands
-    assessment/              survey + results
-    home/                    bottom-nav shell, home, profile, placeholders
-    devices/                 pairing + test vibration
-  widgets/                   shared PillButton
-```
-
-## How the mock layer maps to real services later
-
-Everything the UI talks to goes through a Riverpod controller, so swapping in
-real implementations doesn't touch the screens:
-
-| Mock now | Real later (phase) |
+| ไฟล์ | ทำไมสำคัญ |
 |---|---|
-| `AuthController` (in-memory) | Firebase Auth + Firestore (1.5) |
-| `BleController` (simulated buzz) | `flutter_blue_plus` against firmware UUIDs (3) |
-| `ProfileService` scoring | same logic, tune weights after user testing (2) |
-| Home favourites (hard-coded) | Mapbox Directions + saved places (4) |
+| [`CLAUDE.md`](CLAUDE.md) | สถานะล่าสุดของทั้งโปรเจกต์ — อะไรเสร็จแล้ว อะไรยังเป็นของปลอม อะไรคือขั้นต่อไป |
+| [`report/PROJECT_BRIEF.md`](report/PROJECT_BRIEF.md) | สรุปรายงาน 54 หน้าให้อ่านจบใน 10 นาที (ฮาร์ดแวร์ AI 6 ชั้น กลุ่มเป้าหมาย คู่แข่ง) |
+| [`report/SenseSafe-Report.pdf`](report/SenseSafe-Report.pdf) | รายงานตัวจริงที่ส่งอาจารย์ |
 
-## Next steps
+---
 
-- **Phase 2:** persist the vibration profile (shared_preferences/Firestore) and
-  add the Settings screen to fine-tune intensity / lead time / rhythm.
-- **Phase 3:** real BLE — define the wristband's service/characteristic UUIDs
-  and replace `BleController`'s body.
-- **Phase 4:** Mapbox map + Directions, the route picker, and the **Haptic
-  Engine** that fires the correct wrist ahead of each maneuver.
+## 🔨 สถานะตอนนี้ (7 ก.ย. 2026)
 
-See `../HapticDrive_Tech_Plan.md` for the full roadmap.
+**ใช้งานได้จริงแล้ว** — สมัคร/เข้าสู่ระบบ (Firebase), แบบประเมิน 6 ข้อ → โปรไฟล์การสั่น,
+ค้นหาเส้นทาง Google Maps พร้อมจัดอันดับ LD-Friendly, ที่อยู่โปรด, ประวัติการเดินทาง,
+หน้าตั้งค่าความแรง, และโหมดขับ**จำลอง**ที่สั่นข้อมือถูกข้างก่อนถึงจุดเลี้ยว
+
+**ยังเป็นของปลอม** — BLE ทั้งหมดยังจำลองอยู่ (ยังไม่ต่อสายรัดจริง),
+ตำแหน่งรถยังจำลอง (ยังไม่ใช้ GPS จริง), ผู้ช่วย AI ยังไม่มี API key
+
+**ยังไม่มีเลย** — YOLO กล้องหน้ารถ, LSTM ตรวจความเครียด, สั่งงานด้วยเสียง
+
+### ⚠️ ช่องโหว่ที่ใหญ่ที่สุด
+**ยังไม่มีหลักฐานจากผู้ใช้จริงสักคน** รายงานบทที่ 1 สัญญาว่าจะวัด 6 อย่าง
+(ความแม่นยำในการนำทาง, เวลาตอบสนอง, จำนวนครั้งที่เลี้ยวผิด, ความเบี่ยงเบนสายตา,
+ภาระทางความคิด, ความมั่นใจ) แต่ทั้ง 54 หน้าไม่เคยกลับมาพูดถึงอีกเลย
+
+งานที่กำลังทำเพื่ออุดช่องนี้อยู่ใน [`research/`](research/)
+
+### ขั้นต่อไป
+1. ทดสอบมอเตอร์สั่นบนฮาร์ดแวร์จริง (`firmware/test/motor_test`)
+2. เขียน `firmware/PROTOCOL.md` — สัญญา BLE ระหว่างแอปกับสายรัด (issue #9)
+3. สัมภาษณ์ผู้เชี่ยวชาญ LD → เอาผลมาเติมรายงาน
+
+---
+
+## 🔗 ลิงก์
+
+- GitHub: [witthayut/Sense-Safe](https://github.com/witthayut/Sense-Safe) (private)
+- Issue board: [#9–#13 = เฟสสายรัดข้อมือ](https://github.com/witthayut/Sense-Safe/milestones)
