@@ -33,10 +33,10 @@ void main() {
       double? tapAt(double m) =>
           ProximityPulser().onProgress(distanceM: m, nowMs: 0, maneuverIndex: 0);
 
-      expect(tapAt(250), closeTo(0.25, 1e-9)); // duty 165
-      expect(tapAt(150), closeTo(0.42, 1e-9)); // duty 185
-      expect(tapAt(80), closeTo(0.58, 1e-9)); // duty 205
-      expect(tapAt(40), closeTo(0.79, 1e-9)); // duty 230
+      expect(tapAt(250), closeTo(0.54, 1e-9)); // duty 200
+      expect(tapAt(150), closeTo(0.71, 1e-9)); // duty 220
+      expect(tapAt(80), closeTo(0.86, 1e-9)); // duty 238
+      expect(tapAt(40), closeTo(0.94, 1e-9)); // duty 248
     });
 
     test('strength rises monotonically as the turn closes', () {

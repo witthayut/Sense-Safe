@@ -24,15 +24,22 @@ class HapticCuePlayer {
 
   final BleController _ble;
 
-  /// PREP sits at the bare perception floor by explicit request — under the
-  /// firmware's floor remap, intensity 0.0 IS duty 135, not silence.
+  /// All timings and strengths below were tuned on a real wrist 2026-09-08
+  /// with firmware/test/turn_approach.
   ///
-  /// Be aware this is the threshold measured sitting still, arm on a desk,
-  /// concentrating. In a moving car — engine buzz, road vibration, a moving
-  /// arm, attention on the road — that threshold rises, so PREP may be missed.
-  /// If it is, raise this: 0.25 (duty 165, the ladder's first rung) is the
-  /// safer starting point.
-  static const double prepIntensity = 0.0;
+  /// The taps are long on purpose. A vibration motor needs 50-100 ms to spin
+  /// up, so the first pass at 140 ms spent most of every tap accelerating and
+  /// never delivered the strength its duty asked for — it read as both "too
+  /// weak" and "too short", which turned out to be the same complaint.
+  /// Lengthening a tap raises its felt strength at no extra power.
+
+  /// PREP, duty 185. Above the 135 perception floor by a real margin: that
+  /// floor was measured sitting still and concentrating, and rises in a
+  /// moving car with engine buzz, road vibration and attention on the road.
+  static const double prepIntensity = 0.42;
+
+  /// One tap of the approach ladder.
+  static const int approachTapMs = 350;
 
   List<_Pulse> _patternFor(CueStage stage, VibrationProfile profile) {
     final i = profile.intensity.clamp(0.0, 1.0);
@@ -41,8 +48,8 @@ class HapticCuePlayer {
       // approach ladder fires afterwards.
       case CueStage.prep:
         return const [
-          (intensity: prepIntensity, durationMs: 180, gapMs: 140),
-          (intensity: prepIntensity, durationMs: 180, gapMs: 0),
+          (intensity: prepIntensity, durationMs: 300, gapMs: 200),
+          (intensity: prepIntensity, durationMs: 300, gapMs: 0),
         ];
 
       // No longer fired during a drive — ProximityPulser owns the 250-20 m
@@ -66,13 +73,13 @@ class HapticCuePlayer {
       // TEXTURE from everything else, not just a stronger version of it:
       // taps mean "getting closer", continuous means "turn now".
       case CueStage.now:
-        return const [(intensity: 1.0, durationMs: 800, gapMs: 0)];
+        return const [(intensity: 1.0, durationMs: 1500, gapMs: 0)];
     }
   }
 
   /// One tap from the approach ladder. Same wrist rules as any other cue.
   Future<void> playApproachTap(Wrist wrist, double intensity) =>
-      _ble.pulse(wrist, intensity: intensity, durationMs: 140);
+      _ble.pulse(wrist, intensity: intensity, durationMs: approachTapMs);
 
   /// Play a turn cue on one wrist. Fire-and-forget from the engine's tick.
   Future<void> playCue(
@@ -91,8 +98,10 @@ class HapticCuePlayer {
   /// Arrival: gentle simultaneous pulse on both wrists.
   Future<void> playArrival() async {
     await Future.wait([
-      _ble.pulse(Wrist.left, intensity: 0.4, durationMs: 600),
-      _ble.pulse(Wrist.right, intensity: 0.4, durationMs: 600),
+      // Lengthened with the rest for the same spin-up reason; strength left
+      // gentle on purpose, since arrival is good news, not an instruction.
+      _ble.pulse(Wrist.left, intensity: 0.42, durationMs: 900),
+      _ble.pulse(Wrist.right, intensity: 0.42, durationMs: 900),
     ]);
   }
 }

@@ -46,11 +46,16 @@ class ProximityPulser {
 
   /// Nearest band first — the lookup takes the first one that matches.
   /// Duty values assume the firmware's floor remap (135 + intensity * 120).
+  ///
+  /// Tuned on a real wrist 2026-09-08 with firmware/test/turn_approach. The
+  /// first pass sat much lower and read as "too weak": 135 is the threshold
+  /// of perception measured sitting still, not a level anyone can rely on
+  /// while driving.
   static const List<ProximityBand> defaultLadder = [
-    ProximityBand(withinM: 40, intervalMs: 500, intensity: 0.79), // duty 230
-    ProximityBand(withinM: 80, intervalMs: 1000, intensity: 0.58), // duty 205
-    ProximityBand(withinM: 150, intervalMs: 2000, intensity: 0.42), // duty 185
-    ProximityBand(withinM: 250, intervalMs: 4000, intensity: 0.25), // duty 165
+    ProximityBand(withinM: 40, intervalMs: 500, intensity: 0.94), // duty 248
+    ProximityBand(withinM: 80, intervalMs: 1000, intensity: 0.86), // duty 238
+    ProximityBand(withinM: 150, intervalMs: 2000, intensity: 0.71), // duty 220
+    ProximityBand(withinM: 250, intervalMs: 4000, intensity: 0.54), // duty 200
   ];
 
   final List<ProximityBand> _ladder;
