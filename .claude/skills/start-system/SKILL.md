@@ -5,7 +5,7 @@ description: Start the Haptic Drive app locally (Flutter web on a stable port 80
 
 Launch the Haptic Drive Flutter web app and serve it on a fixed port (8090) so the URL stays stable and no orphaned dev servers pile up.
 
-Project dir: `c:\Users\USER\Desktop\Sense&Safe\app`
+Project dir: `c:\Users\USER\Desktop\Sense-Safe\app`
 
 Steps:
 
@@ -16,7 +16,7 @@ Steps:
 
 2. **Start the app in the background** from the project dir:
    ```
-   cd "c:/Users/USER/Desktop/Sense&Safe/app" && flutter run -d web-server --web-port=8090
+   cd "c:/Users/USER/Desktop/Sense-Safe/app" && flutter run -d web-server --web-port=8090
    ```
    Run it with `run_in_background: true` (it's long-running — do not block on it).
 

@@ -10,12 +10,12 @@ updated as work progresses so future sessions don't have to re-derive state.
 > Most of THIS file covers the **Flutter app** in `app/`: what is actually
 > built, versus the full vision described there.
 
-## Repo layout (restructured 2026-09-07)
+## Repo layout (restructured 2026-09-07, folder renamed 2026-09-08)
 
 This repository is the whole project, not just the app. One root, six folders:
 
 ```
-Sense&Safe/            ← git root = github.com/witthayut/Sense-Safe
+Sense-Safe/            ← git root = github.com/witthayut/Sense-Safe
   app/                  Flutter app (phone)      — was the old haptic_drive/
   firmware/             Arduino (ESP32-C3 wristbands)
   report/               the report submitted to the advisor + PROJECT_BRIEF
@@ -186,6 +186,45 @@ check questions.
   LiPo. App impact: none — `pulse(intensity, durationMs)` maps to (duty, ms).
   Still unknown: whether parts are physically in hand yet. Waiting for the
   user to say "start #9".
+
+## 🔴 Hardware measured 2026-09-08 — six app bugs confirmed by it
+
+The wristband hardware works end to end (ESP32-C3 + AH024 over PWM). Measuring
+it on a real wrist produced one number that invalidates several app defaults:
+
+**Perception floor = PWM duty 135 / 255 = intensity 0.53.** Below that the
+motor is not weak, it is *silent*. Full record + method in
+[`firmware/MEASUREMENTS.md`](firmware/MEASUREMENTS.md) (n=1, medium confidence).
+
+Everything below sends the band a value it physically cannot render:
+
+| File | Line | Produces | Result |
+|---|---|---|---|
+| `app/lib/services/calibration_controller.dart` | 57 | levels 1-2 of 5 = 0.30 / 0.475 | 🔴 two of five onboarding levels are silent |
+| `app/lib/services/calibration_controller.dart` | 65 | `mapPattern` marks "mapped" when the packet was *sent* | 🔴 success ≠ the user felt anything |
+| `app/lib/services/profile_service.dart` | 70 | `0.35 + overall*0.5`, silent when `overall < 0.36` | 🔴 the assessment hands mild-LD users a dead profile |
+| `app/lib/services/haptic_cue_player.dart` | 31 | PREP = intensity × 0.5 | 🔴 PREP can never be felt |
+| `app/lib/services/hapu_ema.dart` | 30 | `minIntensity = 0.1` | 🟠 HAPU can tune a band to silence over trips |
+| `app/lib/features/settings/settings_screen.dart` | 105 | slider `min: 0.1` | 🟠 ~48% of the slider does nothing |
+
+**Agreed fix (do NOT hardcode 0.53 in the app):** the firmware owns the
+mapping, because the floor is a property of the motor, not of the app —
+
+```
+duty = FLOOR + intensity × (255 − FLOOR)
+```
+
+The app keeps sending 0.0-1.0. One change kills all six rows, and swapping to
+an LRA later means editing one constant. This is decision #1 for `PROTOCOL.md`.
+
+Longer term `FLOOR` must be per-user, not a constant: the Test Vibration screen
+(`calibration_controller.dart`) already exists for exactly this and should
+*measure* it rather than assume it.
+
+**Cue patterns v2** (in `firmware/test/haptic_calibrate`, not yet in the app):
+v1 encoded urgency in amplitude and failed a blind test — the usable range is
+only 135-255 and skin resolves 2-3 steps in it. v2 encodes urgency in **pulse
+count** (PREP 1 tap / ALERT 2 / NOW 4 fast). Blind re-test still pending.
 
 ## Still mock / stubbed (don't mistake for done)
 

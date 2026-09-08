@@ -5,9 +5,9 @@ description: Run an overall health check on the Haptic Drive project — automat
 
 Produce a single, honest **Project Health Report** for Haptic Drive that answers: *Does this app actually work, and is it ready to ship?* Combine automated checks with a structured review, then give a clear Go/No-Go with a prioritized action list.
 
-Project dir: `c:\Users\USER\Desktop\Sense&Safe\app`
-Roadmap reference: `c:\Users\USER\Desktop\Sense&Safe\planning\Tech-Plan.md` (Phases 0-6)
-Manual QA checklist: `c:\Users\USER\Desktop\Sense&Safe\planning\Test-Checklist.xlsx`
+Project dir: `c:\Users\USER\Desktop\Sense-Safe\app`
+Roadmap reference: `c:\Users\USER\Desktop\Sense-Safe\planning\Tech-Plan.md` (Phases 0-6)
+Manual QA checklist: `c:\Users\USER\Desktop\Sense-Safe\planning\Test-Checklist.xlsx`
 
 Work through all five sections below in order. Do not skip a section — if a step can't run, record it as **Could not verify** with the reason rather than assuming pass.
 
@@ -18,7 +18,7 @@ Work through all five sections below in order. Do not skip a section — if a st
 Run from the project dir. Capture the real output; never assume green.
 
 ```
-cd "c:/Users/USER/Desktop/Sense&Safe/app"
+cd "c:/Users/USER/Desktop/Sense-Safe/app"
 flutter pub get
 flutter analyze
 flutter test
@@ -82,7 +82,7 @@ Score each area Green / Yellow / Red:
 
 **Go/No-Go rule:** No-Go if any safety-critical item is missing/unverified, if there are analyze *errors* or failing tests, or if any **Critical** checklist case is unpassed. Otherwise Go-with-caveats or Go.
 
-Write the report to `c:\Users\USER\Desktop\Sense&Safe\Project_Health_Report_<YYYY-MM-DD>.md` with this shape, then present it to the user:
+Write the report to `c:\Users\USER\Desktop\Sense-Safe\Project_Health_Report_<YYYY-MM-DD>.md` with this shape, then present it to the user:
 
 ```
 # Haptic Drive — Project Health Report (<date>)
