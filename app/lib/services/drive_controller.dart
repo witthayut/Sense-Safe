@@ -12,6 +12,7 @@ import 'auth_controller.dart';
 import 'ble_controller.dart';
 import 'cue_scheduler.dart';
 import 'haptic_cue_player.dart';
+import 'proximity_pulser.dart';
 import 'route_progress.dart';
 
 enum DriveStatus { idle, driving, arrived }
@@ -101,6 +102,8 @@ class DriveController extends Notifier<DriveState> {
   Timer? _timer;
   RoutePath? _path;
   CueScheduler? _scheduler;
+  ProximityPulser? _pulser;
+  int _elapsedMs = 0;
   VibrationProfile? _profile;
 
   /// Fallback when the user never completed an assessment: medium everything.
@@ -153,7 +156,10 @@ class DriveController extends Notifier<DriveState> {
       maneuvers: planned,
       leadTimeSeconds: _profile!.leadTimeSeconds,
       speedMps: _baseSpeedKmh / 3.6,
+      nowM: ProximityPulser.handoverM,
     );
+    _pulser = ProximityPulser();
+    _elapsedMs = 0;
 
     state = DriveState(
       status: DriveStatus.driving,
@@ -180,6 +186,7 @@ class DriveController extends Notifier<DriveState> {
     _cancelTimer();
     _path = null;
     _scheduler = null;
+    _pulser = null;
     _profile = null;
     state = const DriveState();
   }
@@ -225,11 +232,37 @@ class DriveController extends Notifier<DriveState> {
       final player =
           HapticCuePlayer(ref.read(bleControllerProvider.notifier));
       for (final c in cues) {
+        // ALERT is no longer played during a drive: ProximityPulser owns the
+        // 250-20 m window, and firing both would put a burst in the middle of
+        // the tap train. The cue is still scheduled and logged so the screen
+        // can show the stage it reached.
+        if (c.stage == CueStage.alert) continue;
         unawaited(player.playCue(c.stage, c.wrist, profile));
       }
     }
 
     final next = scheduler.nextManeuver;
+
+    // Approach ladder: single taps that get faster and stronger as the turn
+    // closes. The wrist still comes from the maneuver, never from geometry.
+    _elapsedMs += (dtSeconds * 1000).round();
+    final pulser = _pulser;
+    if (pulser != null && next != null && hapticsOk) {
+      final wrist = next.wrist;
+      if (wrist != null) {
+        final tap = pulser.onProgress(
+          distanceM: next.alongM - progress,
+          nowMs: _elapsedMs,
+          maneuverIndex: scheduler.nextManeuverIndex,
+        );
+        if (tap != null) {
+          unawaited(
+            HapticCuePlayer(ref.read(bleControllerProvider.notifier))
+                .playApproachTap(wrist, tap),
+          );
+        }
+      }
+    }
     state = state.copyWith(
       progressM: progress,
       position: path.pointAt(progress),

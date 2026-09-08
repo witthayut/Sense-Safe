@@ -24,11 +24,30 @@ class HapticCuePlayer {
 
   final BleController _ble;
 
+  /// PREP sits at the bare perception floor by explicit request — under the
+  /// firmware's floor remap, intensity 0.0 IS duty 135, not silence.
+  ///
+  /// Be aware this is the threshold measured sitting still, arm on a desk,
+  /// concentrating. In a moving car — engine buzz, road vibration, a moving
+  /// arm, attention on the road — that threshold rises, so PREP may be missed.
+  /// If it is, raise this: 0.25 (duty 165, the ladder's first rung) is the
+  /// safer starting point.
+  static const double prepIntensity = 0.0;
+
   List<_Pulse> _patternFor(CueStage stage, VibrationProfile profile) {
     final i = profile.intensity.clamp(0.0, 1.0);
     switch (stage) {
+      // Two short taps — an announcement, distinct from every single tap the
+      // approach ladder fires afterwards.
       case CueStage.prep:
-        return [(intensity: i * 0.5, durationMs: 200, gapMs: 0)];
+        return const [
+          (intensity: prepIntensity, durationMs: 180, gapMs: 140),
+          (intensity: prepIntensity, durationMs: 180, gapMs: 0),
+        ];
+
+      // No longer fired during a drive — ProximityPulser owns the 250-20 m
+      // window now. Kept because the Settings screen plays it as the live
+      // preview while the user drags the intensity/rhythm controls.
       case CueStage.alert:
         return switch (profile.rhythm) {
           HapticRhythm.soft => [(intensity: i, durationMs: 500, gapMs: 0)],
@@ -42,14 +61,18 @@ class HapticCuePlayer {
               (intensity: i, durationMs: 140, gapMs: 0),
             ],
         };
+
+      // One long unbroken buzz at full power. Deliberately a different
+      // TEXTURE from everything else, not just a stronger version of it:
+      // taps mean "getting closer", continuous means "turn now".
       case CueStage.now:
-        final strong = (i + 0.25).clamp(0.0, 1.0);
-        return [
-          (intensity: strong, durationMs: 180, gapMs: 90),
-          (intensity: strong, durationMs: 180, gapMs: 0),
-        ];
+        return const [(intensity: 1.0, durationMs: 800, gapMs: 0)];
     }
   }
+
+  /// One tap from the approach ladder. Same wrist rules as any other cue.
+  Future<void> playApproachTap(Wrist wrist, double intensity) =>
+      _ble.pulse(wrist, intensity: intensity, durationMs: 140);
 
   /// Play a turn cue on one wrist. Fire-and-forget from the engine's tick.
   Future<void> playCue(
