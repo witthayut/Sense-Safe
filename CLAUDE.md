@@ -226,10 +226,19 @@ Longer term `FLOOR` must be per-user, not a constant: the Test Vibration screen
 (`calibration_controller.dart`) already exists for exactly this and should
 *measure* it rather than assume it.
 
-**Cue patterns v2** (in `firmware/test/haptic_calibrate`, not yet in the app):
+**Cue patterns v2** (now IN the app — `proximity_pulser.dart` +
+`haptic_cue_player.dart`):
 v1 encoded urgency in amplitude and failed a blind test — the usable range is
 only 135-255 and skin resolves 2-3 steps in it. v2 encodes urgency in **pulse
 count** (PREP 1 tap / ALERT 2 / NOW 4 fast). Blind re-test still pending.
+
+**Sensor I2C pins decided 2026-09-08 (#13 groundwork):** GY-MAX30102 and
+MPU-6050 share one I2C bus on **SDA=GPIO6 / SCL=GPIO7** (moved off the board
+default GPIO8/9 = LED/BOOT). Powered from the 3.3 pin, never 5V (C3 GPIOs are
+not 5V-tolerant and the module pull-ups follow VIN). Smoke test:
+`firmware/test/max30102_test` (I2C scan → part ID 0x15 → fingertip BPM),
+compiles against esp32 core 3.3.11 + SparkFun MAX3010x 1.1.2; not yet run on
+hardware. Full wiring in `firmware/README.md`.
 
 ## Still mock / stubbed (don't mistake for done)
 

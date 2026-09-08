@@ -36,7 +36,7 @@ flutter run -d chrome
 หรือใช้คำสั่ง **`/start-system`** ใน Claude Code (เปิดที่ `localhost:8090`)
 
 ### แฟลชสายรัดข้อมือ
-เปิด `firmware/test/motor_test/motor_test.ino` ด้วย Arduino IDE
+เปิด `firmware/test/turn_approach/turn_approach.ino` ด้วย Arduino IDE
 → อ่านวิธีตั้งค่าบอร์ดและการต่อสายใน [`firmware/README.md`](firmware/README.md)
 
 ### ตรวจสุขภาพโค้ด
@@ -76,7 +76,7 @@ flutter analyze && flutter test
 งานที่กำลังทำเพื่ออุดช่องนี้อยู่ใน [`research/`](research/)
 
 ### ขั้นต่อไป
-1. ทดสอบมอเตอร์สั่นบนฮาร์ดแวร์จริง (`firmware/test/motor_test`)
+1. ~~ทดสอบมอเตอร์สั่นบนฮาร์ดแวร์จริง~~ ✅ เสร็จแล้ว (ดู `firmware/MEASUREMENTS.md`)
 2. เขียน `firmware/PROTOCOL.md` — สัญญา BLE ระหว่างแอปกับสายรัด (issue #9)
 3. สัมภาษณ์ผู้เชี่ยวชาญ LD → เอาผลมาเติมรายงาน
 
