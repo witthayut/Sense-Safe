@@ -185,7 +185,7 @@ class _CalibrationCard extends StatelessWidget {
                               fontWeight: FontWeight.w700, fontSize: 15)),
                       SizedBox(height: 2),
                       Text('Try them from the left. Tap the weakest one you '
-                          'can still feel.',
+                          'can still feel — tap it again if you are not sure.',
                           style: TextStyle(
                               color: AppColors.inkSoft, fontSize: 13)),
                     ],

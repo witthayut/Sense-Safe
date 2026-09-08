@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/wristband.dart';
 import 'assessment_controller.dart';
 import 'ble_controller.dart';
+import 'haptic_cue_player.dart';
 
 /// How many sample strengths the wearer is offered per wrist.
 const int kCalibrationPatternCount = 5;
@@ -69,7 +70,15 @@ class CalibrationController extends Notifier<CalibrationState> {
 
   /// Play level [index] on [wrist] and record it as the weakest level felt
   /// there. Tapping a different level simply replaces the answer, so the
-  /// wearer can hunt up and down freely.
+  /// wearer can hunt up and down freely, and tapping the SAME level again
+  /// just replays it — which is how someone gets a second opinion without
+  /// the test itself becoming easier.
+  ///
+  /// One pulse, never two. The weakest thing this app ever sends is a single
+  /// approach tap, so that is exactly what the floor has to be measured
+  /// against. Two pulses would give the wearer two chances to notice one
+  /// level, they would settle a rung lower than they should, and the real
+  /// single tap would then slip past them on the road.
   ///
   /// Returns false when the band is not connected, so the UI can say so —
   /// note that a true return means the packet went out, NOT that the wearer
@@ -81,6 +90,9 @@ class CalibrationController extends Notifier<CalibrationState> {
     final ok = await ref.read(bleControllerProvider.notifier).testVibration(
           wrist,
           intensity: calibrationIntensity(index),
+          // Bound to the real cue, not repeated here, so the two can never
+          // drift apart silently.
+          durationMs: HapticCuePlayer.approachTapMs,
         );
     if (!ok) return false;
 
