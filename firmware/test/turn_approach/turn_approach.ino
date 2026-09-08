@@ -1,19 +1,19 @@
 /*
  * Sense&Safe — turn_approach
  * --------------------------
- * The six stages of approaching one turn, on demand.
+ * The six stages of approaching one turn, on demand, with live tuning.
  *
- *   1  300 m   two taps                    duty 135   "a turn is coming"
- *   2  250 m   single tap every 4.0 s      duty 165
- *   3  150 m   single tap every 2.0 s      duty 185
- *   4   80 m   single tap every 1.0 s      duty 205
- *   5   40 m   single tap every 0.5 s      duty 230
- *   6  <20 m   one long unbroken buzz      duty 255   "turn NOW"
+ * WHY THE PULSES GOT LONGER (revised after the first wrist test)
+ * A vibration motor needs 50-100 ms to spin up to speed. The first pass used
+ * 140 ms taps, so most of every tap was spent accelerating and the wearer
+ * never felt the strength the duty asked for — it read as "too weak" AND
+ * "too short", which are the same complaint. Longer taps feel stronger at
+ * the same duty, for free, because the motor actually reaches its rated
+ * speed before it is told to stop.
  *
- * Press a number to sit on that stage. Press r to drive the whole approach
- * at 40 km/h and feel it the way it will actually arrive — which is the only
- * way to judge whether the escalation reads as one rising signal or as six
- * unrelated buzzes.
+ * Duties were also raised off the 135 floor. That floor was measured sitting
+ * still, arm on a desk, concentrating; it is the threshold of perception,
+ * not a usable working level.
  *
  * Board:  ESP32-C3 Super Mini   Wiring: AH024 IN -> GPIO 4, VCC -> 5V
  * Serial: 115200, line ending "New Line"
@@ -23,32 +23,30 @@
 const int MOTOR_PIN = 4;
 const int LED_PIN   = 8;
 
-// Change this to feel the approach at a different speed. 40 km/h is the
-// value DriveController simulates.
-const float SPEED_KMH = 40.0;
-const float SPEED_MPS = SPEED_KMH / 3.6;
+// Change to feel the approach at a different speed. 40 km/h is what
+// DriveController simulates.
+float SPEED_KMH = 40.0;
 
 struct Stage {
   int         atM;         // distance this stage begins
-  int         duty;
-  int         intervalMs;  // 0 = one-shot, not a repeating tap
+  int         duty;        // 0-255
+  int         tapMs;       // length of ONE tap (or the whole buzz for NOW)
+  int         gapMs;       // PREP only: silence between its two taps
+  int         intervalMs;  // 0 = one-shot, else gap between repeating taps
   const char* label;
 };
 
-const Stage STAGES[] = {
-  {300, 135,    0, "2 ตุ๊บ — มีทางเลี้ยวข้างหน้า"},
-  {250, 165, 4000, "ตุ๊บเดี่ยว ทุก 4 วิ"},
-  {150, 185, 2000, "ตุ๊บเดี่ยว ทุก 2 วิ"},
-  { 80, 205, 1000, "ตุ๊บเดี่ยว ทุก 1 วิ"},
-  { 40, 230,  500, "ตุ๊บเดี่ยว ทุก 0.5 วิ"},
-  { 20, 255,    0, "สั่นยาวรวดเดียว — เลี้ยวเดี๋ยวนี้"},
+// Tunable at runtime — mode [t] edits these in place.
+Stage STAGES[] = {
+  {300, 185, 300, 200,    0, "2 ตุ๊บ — มีทางเลี้ยวข้างหน้า"},
+  {250, 200, 350,   0, 4000, "ตุ๊บเดี่ยว ทุก 4 วิ"},
+  {150, 220, 350,   0, 2000, "ตุ๊บเดี่ยว ทุก 2 วิ"},
+  { 80, 238, 350,   0, 1000, "ตุ๊บเดี่ยว ทุก 1 วิ"},
+  { 40, 248, 350,   0,  500, "ตุ๊บเดี่ยว ทุก 0.5 วิ"},
+  { 20, 255,1500,   0,    0, "สั่นยาวรวดเดียว — เลี้ยวเดี๋ยวนี้"},
 };
 const int N_STAGES = 6;
-
-const int TAP_MS       = 140;   // one approach tap
-const int PREP_TAP_MS  = 180;   // PREP is a slightly longer tap
-const int PREP_GAP_MS  = 140;
-const int NOW_MS       = 800;   // the continuous "turn now" buzz
+const int PREP = 0, NOW = 5;
 
 // ---------------------------------------------------------------- helpers
 
@@ -80,26 +78,29 @@ bool keyPressed() {
   return false;
 }
 
+int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
 // ---------------------------------------------------------------- patterns
 
-void playPrep() {
-  buzz(STAGES[0].duty, PREP_TAP_MS);
-  delay(PREP_GAP_MS);
-  buzz(STAGES[0].duty, PREP_TAP_MS);
+void playStagePattern(int idx) {
+  const Stage& s = STAGES[idx];
+  if (idx == PREP) {
+    buzz(s.duty, s.tapMs);
+    delay(s.gapMs);
+    buzz(s.duty, s.tapMs);
+  } else {
+    buzz(s.duty, s.tapMs);
+  }
 }
 
-void playNow() {
-  buzz(STAGES[5].duty, NOW_MS);
-}
-
-/// Sit on one stage. Repeating stages run until you press Enter, capped so
-/// it can never get stuck.
+/// Sit on one stage. Repeating stages loop until you press Enter.
 void playStage(int idx) {
   const Stage& s = STAGES[idx];
-  Serial.printf("\n  [%d] %d ม.  duty %d  —  %s\n", idx + 1, s.atM, s.duty, s.label);
+  Serial.printf("\n  [%d] %d ม.  duty %d  ยาว %d ms  —  %s\n",
+                idx + 1, s.atM, s.duty, s.tapMs, s.label);
 
   if (s.intervalMs == 0) {
-    if (idx == 0) playPrep(); else playNow();
+    playStagePattern(idx);
     Serial.println("  จบ");
     return;
   }
@@ -107,7 +108,7 @@ void playStage(int idx) {
   Serial.println("  กำลังเล่นซ้ำ... กด Enter เพื่อหยุด");
   drain();
   for (int i = 0; i < 8; i++) {
-    buzz(s.duty, TAP_MS);
+    playStagePattern(idx);
     unsigned long t0 = millis();
     while (millis() - t0 < (unsigned long)s.intervalMs) {
       if (keyPressed()) { Serial.println("  หยุด"); return; }
@@ -117,56 +118,104 @@ void playStage(int idx) {
   Serial.println("  จบ (ครบ 8 ครั้ง)");
 }
 
-/// Drive the whole approach with a shrinking distance, exactly the way
-/// ProximityPulser will do it in the app.
+/// Drive the whole approach with a shrinking distance, the way
+/// ProximityPulser will deliver it in the app.
 void runApproach() {
   Serial.printf("\n=== ขับเข้าหาทางเลี้ยว ที่ %.0f กม./ชม. ===\n", SPEED_KMH);
   Serial.println("กด Enter เพื่อหยุดกลางคัน\n");
   delay(1200);
   drain();
 
-  float dist = 330;
+  const float mps = SPEED_KMH / 3.6f;
   bool prepFired = false;
   unsigned long startMs = millis();
   unsigned long lastTap = 0;
-  int lastShown = 999;
 
   while (true) {
     if (keyPressed()) { motor(0); Serial.println("\n  หยุด"); return; }
 
-    dist = 330 - SPEED_MPS * (millis() - startMs) / 1000.0f;
+    const float dist = 330 - mps * (millis() - startMs) / 1000.0f;
 
-    if (dist <= 20) {
-      Serial.println("   <20 ม.  duty 255  — เลี้ยวเดี๋ยวนี้");
-      playNow();
+    if (dist <= STAGES[NOW].atM) {
+      Serial.printf("   <%d ม.  duty %d  — เลี้ยวเดี๋ยวนี้\n",
+                    STAGES[NOW].atM, STAGES[NOW].duty);
+      playStagePattern(NOW);
       Serial.println("\n  ถึงทางเลี้ยวแล้ว");
       return;
     }
 
-    if (!prepFired && dist <= 300) {
-      Serial.println("   300 ม.  duty 135  — 2 ตุ๊บ");
-      playPrep();
+    if (!prepFired && dist <= STAGES[PREP].atM) {
+      Serial.printf("   %d ม.  duty %d  — 2 ตุ๊บ\n",
+                    STAGES[PREP].atM, STAGES[PREP].duty);
+      playStagePattern(PREP);
       prepFired = true;
       lastTap = millis();
     }
 
-    // Which rung of the ladder are we on?
-    int duty = 0, interval = 0;
-    if (dist <= 40)       { duty = 230; interval = 500;  }
-    else if (dist <= 80)  { duty = 205; interval = 1000; }
-    else if (dist <= 150) { duty = 185; interval = 2000; }
-    else if (dist <= 250) { duty = 165; interval = 4000; }
-
-    if (duty > 0 && millis() - lastTap >= (unsigned long)interval) {
-      Serial.printf("   %3d ม.  duty %d\n", (int)dist, duty);
-      buzz(duty, TAP_MS);
-      lastTap = millis();
-      lastShown = (int)dist;
+    // Nearest matching rung of the ladder (stages 4 down to 1).
+    int rung = -1;
+    for (int i = N_STAGES - 2; i >= 1; i--) {
+      if (dist <= STAGES[i].atM) { rung = i; break; }
     }
-    (void)lastShown;
+
+    if (rung > 0 && millis() - lastTap >= (unsigned long)STAGES[rung].intervalMs) {
+      Serial.printf("   %3d ม.  duty %d\n", (int)dist, STAGES[rung].duty);
+      playStagePattern(rung);
+      lastTap = millis();
+    }
 
     delay(20);
   }
+}
+
+// ---------------------------------------------------------------- tuning
+
+/// Adjust one stage while feeling it, so the numbers can be settled without
+/// a recompile between every guess.
+void tuneStage(int idx) {
+  Stage& s = STAGES[idx];
+  Serial.printf("\n=== ปรับด่านที่ %d (%d ม.) ===\n", idx + 1, s.atM);
+  Serial.println("  +  /  -   ความแรง  ±5      (พิมพ์ ++ หรือ -- เพื่อ ±20)");
+  Serial.println("  ]  /  [   ความยาว  ±50 ms");
+  Serial.println("  <Enter>   เล่นซ้ำ");
+  Serial.println("  s         บันทึกแล้วออก\n");
+
+  while (true) {
+    Serial.printf("  duty %3d   ยาว %4d ms  >  ", s.duty, s.tapMs);
+    playStagePattern(idx);
+
+    String c = readLine();
+    if (c.length() == 0) continue;              // Enter = play again
+    c.toLowerCase();
+
+    if (c.startsWith("s")) {
+      Serial.printf("\n  บันทึก: duty %d, ยาว %d ms\n", s.duty, s.tapMs);
+      return;
+    }
+    if (c == "++")      s.duty  = clampi(s.duty + 20, 0, 255);
+    else if (c == "--") s.duty  = clampi(s.duty - 20, 0, 255);
+    else if (c[0] == '+') s.duty = clampi(s.duty + 5, 0, 255);
+    else if (c[0] == '-') s.duty = clampi(s.duty - 5, 0, 255);
+    else if (c[0] == ']') s.tapMs = clampi(s.tapMs + 50, 50, 3000);
+    else if (c[0] == '[') s.tapMs = clampi(s.tapMs - 50, 50, 3000);
+    else Serial.println("  ใช้ + - ] [ Enter หรือ s");
+  }
+}
+
+/// Print every current value in a form that can be pasted back into the app.
+void dumpValues() {
+  Serial.println("\n=== ค่าปัจจุบันทั้งหมด — ส่งบล็อกนี้ให้ Claude ===");
+  Serial.println("ระยะ    duty   ยาว(ms)  จังหวะ");
+  for (int i = 0; i < N_STAGES; i++) {
+    const Stage& s = STAGES[i];
+    if (s.intervalMs == 0) {
+      Serial.printf("%4d ม.  %3d    %4d     one-shot\n", s.atM, s.duty, s.tapMs);
+    } else {
+      Serial.printf("%4d ม.  %3d    %4d     ทุก %.1f วิ\n",
+                    s.atM, s.duty, s.tapMs, s.intervalMs / 1000.0);
+    }
+  }
+  Serial.println("=================================================");
 }
 
 // ---------------------------------------------------------------- menu
@@ -174,10 +223,13 @@ void runApproach() {
 void menu() {
   Serial.println("\n\n=== Sense&Safe — ทดสอบการเข้าหาทางเลี้ยว ===\n");
   for (int i = 0; i < N_STAGES; i++) {
-    Serial.printf("  %d = %4d ม.   duty %3d   %s\n",
-                  i + 1, STAGES[i].atM, STAGES[i].duty, STAGES[i].label);
+    const Stage& s = STAGES[i];
+    Serial.printf("  %d = %4d ม.   duty %3d  ยาว %4d ms   %s\n",
+                  i + 1, s.atM, s.duty, s.tapMs, s.label);
   }
-  Serial.println("\n  r = ขับเข้าหาทางเลี้ยวทั้งหมดตั้งแต่ต้นจนจบ  <- ตัวจริง");
+  Serial.println("\n  r  = ขับเข้าหาทางเลี้ยวทั้งหมด  <- ตัวจริง");
+  Serial.println("  t1..t6 = ปรับความแรง/ความยาวของด่านนั้นแบบสด");
+  Serial.println("  d  = สรุปค่าปัจจุบันทั้งหมด");
   Serial.print("\nเลือก: ");
 }
 
@@ -203,10 +255,16 @@ void loop() {
 
   if (s.startsWith("r")) {
     runApproach();
+  } else if (s.startsWith("d")) {
+    dumpValues();
+  } else if (s.startsWith("t")) {
+    int n = s.substring(1).toInt();
+    if (n >= 1 && n <= N_STAGES) tuneStage(n - 1);
+    else Serial.println("  พิมพ์ t1 ถึง t6");
   } else {
     int n = s.toInt();
     if (n >= 1 && n <= N_STAGES) playStage(n - 1);
-    else Serial.println("  พิมพ์ 1-6 หรือ r");
+    else Serial.println("  พิมพ์ 1-6, r, t1-t6 หรือ d");
   }
   menu();
 }
