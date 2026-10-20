@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LD Haptic Wristband Prototype — Live Simulator</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: #f4f4f2;
+    color: #222;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .page { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #666; margin: 0 0 20px; }
+  .card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 14px; font-weight: 600; margin: 0 0 10px; color: #333; }
+  svg#schematic { width: 100%; height: auto; display: block; }
+  svg#breadboard { width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: #444; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 14px; height: 3px; display: inline-block; border-radius: 2px; }
+  .dotnote { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #222; }
+  .view-toggle { display: flex; gap: 8px; margin-bottom: 10px; }
+  .view-btn {
+    font-size: 12px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid #ccc; background: #fff; cursor: pointer; color: #555;
+  }
+  .view-btn:hover { background: #f0f0f0; }
+  .view-btn.active { background: #222; color: #fff; border-color: #222; }
+  .view-btn:disabled { opacity: .4; cursor: default; }
+  .build-controls { margin-top: 10px; }
+  .build-toggle { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: #444; }
+  .step-nav { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .step-counter { font-size: 12px; color: #666; }
+  .step-instruction {
+    margin-top: 8px; padding: 10px 12px; background: #eef6ff; border: 1px solid #cfe3fb;
+    border-radius: 6px; font-size: 13px; color: #1a3a5c; min-height: 18px;
+  }
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 720px) { .panels { grid-template-columns: 1fr; } }
+  .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .bpm-value { font-size: 40px; font-weight: 700; color: #c0392b; line-height: 1; }
+  .bpm-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .05em; }
+  svg#ppgChart { width: 100%; height: 90px; background: #fafafa; border: 1px solid #eee; border-radius: 6px; }
+  .imu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; }
+  .imu-cell { background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 8px; text-align: center; }
+  .imu-cell .axis { font-size: 11px; color: #888; margin-bottom: 2px; }
+  .imu-cell .val { font-weight: 600; }
+  .totalg { margin-top: 10px; font-size: 13px; text-align: center; color: #444; }
+  .totalg b { font-size: 16px; color: #222; }
+  button {
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+  }
+  button:hover { background: #f0f0f0; }
+  button.primary { background: #222; color: #fff; border-color: #222; }
+  button.primary:hover { background: #444; }
+  button.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+  button.danger:hover { background: #a5301f; }
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+  .switch { position: relative; width: 40px; height: 22px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-el {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #ccc; border-radius: 22px; transition: .15s;
+  }
+  .slider-el:before {
+    content: ""; position: absolute; height: 16px; width: 16px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s;
+  }
+  input:checked + .slider-el { background: #27ae60; }
+  input:checked + .slider-el:before { transform: translateX(18px); }
+  #log {
+    background: #1e1e1e;
+    color: #d8d8d8;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    border-radius: 6px;
+    padding: 10px 12px;
+    height: 220px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  .status-pill {
+    display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 12px;
+    background: #eee; color: #666;
+  }
+  .status-pill.on { background: #e6f6ea; color: #1e7d3c; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>LD Haptic Wristband Prototype — live simulator</h1>
+  <p class="subtitle">ESP32-C3 Super Mini + GY-MAX30102 + MPU6050 + AH024 vibration motor, powered from a LiPo battery via a TP4056 charger. Wiring diagram below is a schematic, not a literal breadboard — same electrical connections as the real build.</p>
+
+  <div class="card">
+    <h2>Wiring diagram</h2>
+    <div class="view-toggle">
+      <button class="view-btn active" id="viewSchematicBtn">Schematic</button>
+      <button class="view-btn" id="viewBreadboardBtn">Breadboard</button>
+    </div>
+    <svg id="schematic" viewBox="0 0 860 560" xmlns="http://www.w3.org/2000/svg"></svg>
+    <svg id="breadboard" viewBox="0 0 1060 560" xmlns="http://www.w3.org/2000/svg" style="display:none"></svg>
+    <div class="build-controls" id="buildControls" style="display:none;">
+      <label class="build-toggle"><input type="checkbox" id="buildModeToggle"> Build mode (step-by-step wiring guide)</label>
+      <div class="step-nav" id="stepNav" style="display:none;">
+        <button class="view-btn" id="prevStepBtn">&larr; Prev</button>
+        <span class="step-counter" id="stepCounter"></span>
+        <button class="view-btn" id="nextStepBtn">Next &rarr;</button>
+        <button class="view-btn" id="showAllBtn">Show all</button>
+      </div>
+      <div class="step-instruction" id="stepInstruction"></div>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#d32f2f"></i>3.3V power</span>
+      <span><i class="swatch" style="background:#333"></i>GND</span>
+      <span><i class="swatch" style="background:#2e7d32"></i>SDA (GPIO8)</span>
+      <span><i class="swatch" style="background:#1565c0"></i>SCL (GPIO9)</span>
+      <span><i class="swatch" style="background:#ef6c00"></i>digital drive (GPIO3)</span>
+      <span><i class="dotnote"></i>= real connection. Lines crossing without a dot are not connected.</span>
+      <span>Breadboard view: modeled on a real full-size breadboard (top+bottom power rails, rows a-e/f-j, columns 1-30). Rail colors follow this project's legend (red=3.3V, black=GND) rather than the photo's red/blue, so GND doesn't clash with the SCL blue used elsewhere. Only +3.3V/GND run through the rails — SDA/SCL/GPIO3 stay direct wires, same as the schematic.</span>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div class="card">
+      <h2>Heart rate (simulated GY-MAX30102)</h2>
+      <div class="row">
+        <div>
+          <div class="bpm-value" id="bpmValue">--</div>
+          <div class="bpm-label">beats per minute</div>
+        </div>
+        <span class="status-pill" id="fingerStatus">no contact</span>
+      </div>
+      <svg id="ppgChart" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="card">
+      <h2>Motion (simulated MPU6050)</h2>
+      <div class="imu-grid">
+        <div class="imu-cell"><div class="axis">accel X (m/s²)</div><div class="val" id="axVal">0.00</div></div>
+        <div class="imu-cell"><div class="axis">accel Y (m/s²)</div><div class="val" id="ayVal">0.00</div></div>
+        <div class="imu-cell"><div class="axis">accel Z (m/s²)</div><div class="val" id="azVal">0.00</div></div>
+        <div class="imu-cell"><div class="axis">gyro X (rad/s)</div><div class="val" id="gxVal">0.00</div></div>
+        <div class="imu-cell"><div class="axis">gyro Y (rad/s)</div><div class="val" id="gyVal">0.00</div></div>
+        <div class="imu-cell"><div class="axis">gyro Z (rad/s)</div><div class="val" id="gzVal">0.00</div></div>
+      </div>
+      <div class="totalg">total acceleration: <b id="totalGVal">1.00</b> g (shock alert above 2.50 g)</div>
+    </div>
+
+    <div class="card">
+      <h2>Controls</h2>
+      <div class="row">
+        <button class="primary" id="startBtn">Start</button>
+        <button class="danger" id="shockBtn">Trigger shock</button>
+      </div>
+      <div class="toggle-row">
+        <label class="switch">
+          <input type="checkbox" id="fingerToggle" checked>
+          <span class="slider-el"></span>
+        </label>
+        <span>Finger on sensor</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Event log (mirrors real Serial output)</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function text(x, y, str, opts) {
+    opts = opts || {};
+    const t = el("text", {
+      x: x, y: y,
+      "font-size": opts.size || 12,
+      "font-weight": opts.weight || 400,
+      fill: opts.fill || "#222",
+      "text-anchor": opts.anchor || "start"
+    });
+    t.textContent = str;
+    return t;
+  }
+
+  /* Optional `layer` param: when given, everything is appended into
+     that sub-<g> instead of directly into svgEl. Used by the
+     breadboard view to keep "static" elements (board/rails/boxes)
+     separate from "wire" elements (which Build mode reveals one at a
+     time) -- schematic view just omits it and behaves as before. */
+  function makeDrawer(svgEl, layer) {
+    const target = layer || svgEl;
+    function box(x, y, w, h, title, sub) {
+      const g = el("g", {});
+      g.appendChild(el("rect", { x, y, width: w, height: h, rx: 6, fill: "#fafafa", stroke: "#888", "stroke-width": 1 }));
+      g.appendChild(text(x + w / 2, y + 20, title, { size: 13, weight: 600, anchor: "middle" }));
+      if (sub) g.appendChild(text(x + w / 2, y + 36, sub, { size: 11, fill: "#777", anchor: "middle" }));
+      target.appendChild(g);
+      return { x, y, w, h };
+    }
+    function orthWire(points, color) {
+      let d = `M${points[0][0]} ${points[0][1]}`;
+      for (let i = 1; i < points.length; i++) d += ` L${points[i][0]} ${points[i][1]}`;
+      target.appendChild(el("path", { d, fill: "none", stroke: color, "stroke-width": 1.6 }));
+    }
+    function dot(x, y, color) {
+      target.appendChild(el("circle", { cx: x, cy: y, r: 3, fill: color || "#222" }));
+    }
+    function pinLabel(x, y, str, anchor) {
+      target.appendChild(text(x, y, str, { size: 10.5, fill: "#555", anchor: anchor || "start" }));
+    }
+    function raw(node) { target.appendChild(node); }
+    return { box, orthWire, dot, pinLabel, raw };
+  }
+
+  /* Coordinates for stubs/bus extents are COMPUTED from these tables,
+     not hand-typed per wire, to remove manual-arithmetic mistakes.
+     Declared once at module scope and reused by both views. */
+  const BUS = {
+    vcc: { x: 300, color: "#d32f2f", label: "+3.3V" },
+    gnd: { x: 340, color: "#333",    label: "GND" },
+    sda: { x: 420, color: "#2e7d32", label: "SDA" },
+    scl: { x: 460, color: "#1565c0", label: "SCL" }
+  };
+  const espRightX = 210;
+  const espPins = [
+    { name: "3V3",   y: 230, bus: "vcc" },
+    { name: "G",     y: 270, bus: "gnd" },
+    { name: "GPIO8", y: 320, bus: "sda" },
+    { name: "GPIO9", y: 370, bus: "scl" },
+    { name: "GPIO3", y: 420, bus: null }   /* direct wire, handled separately */
+  ];
+  const maxPins = [
+    { name: "VIN", y: 78,  bus: "vcc" },
+    { name: "GND", y: 100, bus: "gnd" },
+    { name: "SCL", y: 122, bus: "scl" },
+    { name: "SDA", y: 144, bus: "sda" }
+  ];
+  const mpuPins = [
+    { name: "VCC", y: 258, bus: "vcc" },
+    { name: "GND", y: 280, bus: "gnd" },
+    { name: "SCL", y: 302, bus: "scl" },
+    { name: "SDA", y: 324, bus: "sda" }
+  ];
+  const ahPins = [
+    { name: "VCC", y: 458, bus: "vcc" },
+    { name: "GND", y: 480, bus: "gnd" }
+  ];
+  const ahInY = 502; /* IN pin: direct wire from GPIO3, not on a bus */
+
+  /* ---------------------------------------------------------------
+     Schematic view: clean bus-bar diagram (unchanged from before).
+     --------------------------------------------------------------- */
+  function buildSchematic(svgEl) {
+    const D = makeDrawer(svgEl);
+
+    D.box(20, 20, 170, 55, "LiPo battery", "3.7 V");
+    D.box(20, 95, 170, 70, "TP4056", "USB-C charger");
+    D.box(20, 185, 190, 300, "ESP32-C3 Super Mini", "sim. ESP32-C3-DevKitM-1 pinout");
+
+    D.orthWire([[60, 75], [60, 95]], "#d32f2f"); D.dot(60, 75, "#d32f2f"); D.dot(60, 95, "#d32f2f");
+    D.pinLabel(64, 72, "+", "start");
+    D.orthWire([[150, 75], [150, 95]], "#333"); D.dot(150, 75, "#333"); D.dot(150, 95, "#333");
+    D.pinLabel(154, 72, "-", "start");
+    D.pinLabel(64, 112, "B+", "start");
+    D.pinLabel(154, 112, "B-", "start");
+
+    D.orthWire([[60, 165], [60, 185]], "#d32f2f"); D.dot(60, 165, "#d32f2f"); D.dot(60, 185, "#d32f2f");
+    D.pinLabel(64, 162, "OUT+", "start");
+    D.orthWire([[150, 165], [150, 185]], "#333"); D.dot(150, 165, "#333"); D.dot(150, 185, "#333");
+    D.pinLabel(148, 162, "OUT-", "end");
+    D.pinLabel(64, 200, "5V", "start");
+    D.pinLabel(150, 200, "G", "start");
+
+    espPins.forEach(p => {
+      D.pinLabel(espRightX + 4, p.y - 4, p.name, "start");
+      D.dot(espRightX, p.y, p.bus ? BUS[p.bus].color : "#ef6c00");
+    });
+
+    D.box(640, 20, 190, 140, "GY-MAX30102", "Heart rate sensor");
+    D.raw(text(640 + 95, 175, "INT: not connected", { size: 10.5, fill: "#999", anchor: "middle" }));
+
+    D.box(640, 200, 190, 140, "MPU6050", "Accel / gyro");
+    D.raw(text(640 + 95, 355, "XDA, XCL, AD0, INT: not connected", { size: 10.5, fill: "#999", anchor: "middle" }));
+
+    D.box(640, 400, 190, 110, "AH024", "Vibration motor module");
+
+    [maxPins, mpuPins, ahPins].forEach(pins => {
+      pins.forEach(p => {
+        D.pinLabel(640 - 4, p.y - 4, p.name, "end");
+        D.dot(640, p.y, BUS[p.bus].color);
+      });
+    });
+    D.pinLabel(640 - 4, ahInY - 4, "IN", "end");
+    D.dot(640, ahInY, "#ef6c00");
+
+    Object.keys(BUS).forEach(key => {
+      const bus = BUS[key];
+      const ys = [];
+      espPins.forEach(p => { if (p.bus === key) ys.push(p.y); });
+      maxPins.forEach(p => { if (p.bus === key) ys.push(p.y); });
+      mpuPins.forEach(p => { if (p.bus === key) ys.push(p.y); });
+      ahPins.forEach(p => { if (p.bus === key) ys.push(p.y); });
+      const yMin = Math.min(...ys), yMax = Math.max(...ys);
+      D.orthWire([[bus.x, yMin], [bus.x, yMax]], bus.color);
+      D.raw(text(bus.x, yMin - 8, bus.label, { size: 10.5, weight: 600, fill: bus.color, anchor: "middle" }));
+
+      espPins.forEach(p => { if (p.bus === key) { D.orthWire([[espRightX, p.y], [bus.x, p.y]], bus.color); D.dot(bus.x, p.y, bus.color); } });
+      [maxPins, mpuPins, ahPins].forEach(list => {
+        list.forEach(p => { if (p.bus === key) { D.orthWire([[bus.x, p.y], [640, p.y]], bus.color); D.dot(bus.x, p.y, bus.color); } });
+      });
+    });
+
+    D.orthWire([[espRightX, 420], [espRightX, ahInY], [560, ahInY], [640, ahInY]], "#ef6c00");
+    D.dot(espRightX, 420, "#ef6c00");
+  }
+
+  /* buildBreadboardView returns { steps } so the Build-mode controller
+     can reveal wires one at a time. Everything static (board body,
+     rails, hole grid, component boxes, pin markers) draws into
+     staticLayer immediately and is always visible -- only WIRES (the
+     things you'd actually plug in) live in wireLayer and are gated by
+     step index. Every step's coordinates are the exact same ones
+     already used/verified for the full diagram -- Build mode doesn't
+     introduce any new coordinates, it only controls when each
+     pre-verified wire is drawn. */
+  function buildBreadboardView(svgEl) {
+    const staticLayer = el("g", {});
+    const wireLayer = el("g", {});
+    svgEl.appendChild(staticLayer);
+    svgEl.appendChild(wireLayer);
+    const D = makeDrawer(svgEl, staticLayer);
+    const W = makeDrawer(svgEl, wireLayer);
+
+    /* --- static: component boxes + pin markers --- */
+    D.box(20, 20, 170, 55, "LiPo battery", "3.7 V");
+    D.box(20, 95, 170, 70, "TP4056", "USB-C charger");
+    D.box(20, 185, 190, 300, "ESP32-C3 Super Mini", "sim. ESP32-C3-DevKitM-1 pinout");
+    D.pinLabel(64, 72, "+", "start");
+    D.pinLabel(154, 72, "-", "start");
+    D.pinLabel(64, 112, "B+", "start");
+    D.pinLabel(154, 112, "B-", "start");
+    D.pinLabel(64, 162, "OUT+", "start");
+    D.pinLabel(148, 162, "OUT-", "end");
+    D.pinLabel(64, 200, "5V", "start");
+    D.pinLabel(150, 200, "G", "start");
+    espPins.forEach(p => { D.pinLabel(espRightX + 4, p.y - 4, p.name, "start"); D.dot(espRightX, p.y, p.bus ? BUS[p.bus].color : "#ef6c00"); });
+
+    /* --- static: the board itself --- */
+    const boardX = 270, boardY = 70, boardW = 510, boardH = 300;
+    const gridXLeft = 295, gridXRight = 755;
+    const topPlusY = 85, topHoleY1 = 98, topHoleY2 = 110, topMinusY = 122;
+    const rowsA_E = [140, 156, 172, 188, 204];
+    const grooveY = 214;
+    const rowsF_J = [224, 240, 256, 272, 288];
+    const botPlusY = 325, botHoleY1 = 338, botHoleY2 = 350, botMinusY = 362;
+    const N_COLS = 30;
+    function colX(i) { return gridXLeft + (i * (gridXRight - gridXLeft)) / (N_COLS - 1); }
+
+    D.raw(el("rect", { x: boardX, y: boardY, width: boardW, height: boardH, rx: 8, fill: "#f7f4ec", stroke: "#555", "stroke-width": 1.5 }));
+
+    D.raw(el("line", { x1: gridXLeft, y1: topPlusY, x2: gridXRight, y2: topPlusY, stroke: "#d32f2f", "stroke-width": 2.5 }));
+    D.raw(el("line", { x1: gridXLeft, y1: topMinusY, x2: gridXRight, y2: topMinusY, stroke: "#333", "stroke-width": 2.5 }));
+    D.raw(text(boardX + 12, topPlusY + 4, "+", { size: 15, weight: 700, fill: "#d32f2f" }));
+    D.raw(text(boardX + boardW - 16, topPlusY + 4, "+", { size: 15, weight: 700, fill: "#d32f2f" }));
+    D.raw(text(boardX + 12, topMinusY + 4, "−", { size: 15, weight: 700, fill: "#333" }));
+    D.raw(text(boardX + boardW - 16, topMinusY + 4, "−", { size: 15, weight: 700, fill: "#333" }));
+    for (let i = 0; i < N_COLS; i++) {
+      D.raw(el("circle", { cx: colX(i), cy: topHoleY1, r: 1.3, fill: "#999" }));
+      D.raw(el("circle", { cx: colX(i), cy: topHoleY2, r: 1.3, fill: "#999" }));
+    }
+
+    const rowLettersTop = ["a", "b", "c", "d", "e"];
+    const rowLettersBot = ["f", "g", "h", "i", "j"];
+    rowsA_E.forEach((y, i) => {
+      D.raw(text(boardX + 10, y + 3, rowLettersTop[i], { size: 9.5, fill: "#777" }));
+      D.raw(text(boardX + boardW - 14, y + 3, rowLettersTop[i], { size: 9.5, fill: "#777" }));
+      for (let c = 0; c < N_COLS; c++) D.raw(el("circle", { cx: colX(c), cy: y, r: 1.3, fill: "#999" }));
+    });
+    D.raw(el("rect", { x: gridXLeft - 10, y: grooveY - 4, width: (gridXRight - gridXLeft) + 20, height: 8, fill: "#e4dfd0" }));
+    rowsF_J.forEach((y, i) => {
+      D.raw(text(boardX + 10, y + 3, rowLettersBot[i], { size: 9.5, fill: "#777" }));
+      D.raw(text(boardX + boardW - 14, y + 3, rowLettersBot[i], { size: 9.5, fill: "#777" }));
+      for (let c = 0; c < N_COLS; c++) D.raw(el("circle", { cx: colX(c), cy: y, r: 1.3, fill: "#999" }));
+    });
+    [1, 6, 11, 16, 21, 26, 30].forEach(n => {
+      D.raw(text(colX(n - 1), rowsA_E[0] - 8, String(n), { size: 8.5, fill: "#999", anchor: "middle" }));
+    });
+
+    D.raw(el("line", { x1: gridXLeft, y1: botPlusY, x2: gridXRight, y2: botPlusY, stroke: "#d32f2f", "stroke-width": 2.5 }));
+    D.raw(el("line", { x1: gridXLeft, y1: botMinusY, x2: gridXRight, y2: botMinusY, stroke: "#333", "stroke-width": 2.5 }));
+    D.raw(text(boardX + 12, botPlusY + 4, "+", { size: 15, weight: 700, fill: "#d32f2f" }));
+    D.raw(text(boardX + boardW - 16, botPlusY + 4, "+", { size: 15, weight: 700, fill: "#d32f2f" }));
+    D.raw(text(boardX + 12, botMinusY + 4, "−", { size: 15, weight: 700, fill: "#333" }));
+    D.raw(text(boardX + boardW - 16, botMinusY + 4, "−", { size: 15, weight: 700, fill: "#333" }));
+    for (let i = 0; i < N_COLS; i++) {
+      D.raw(el("circle", { cx: colX(i), cy: botHoleY1, r: 1.3, fill: "#999" }));
+      D.raw(el("circle", { cx: colX(i), cy: botHoleY2, r: 1.3, fill: "#999" }));
+    }
+    D.raw(text(colX(0), topPlusY - 14, "jumper", { size: 8.5, fill: "#d32f2f", anchor: "middle" }));
+    D.raw(text(colX(N_COLS - 1), topPlusY - 14, "jumper", { size: 8.5, fill: "#333", anchor: "middle" }));
+
+    const modX = 820;
+    D.box(modX, 20, 190, 140, "GY-MAX30102", "Heart rate sensor");
+    D.raw(text(modX + 95, 175, "INT: not connected", { size: 10.5, fill: "#999", anchor: "middle" }));
+    D.box(modX, 200, 190, 140, "MPU6050", "Accel / gyro");
+    D.raw(text(modX + 95, 355, "XDA, XCL, AD0, INT: not connected", { size: 10.5, fill: "#999", anchor: "middle" }));
+    D.box(modX, 400, 190, 110, "AH024", "Vibration motor module");
+    [maxPins, mpuPins, ahPins].forEach(pins => {
+      pins.forEach(p => { D.pinLabel(modX - 4, p.y - 4, p.name, "end"); D.dot(modX, p.y, BUS[p.bus].color); });
+    });
+    D.pinLabel(modX - 4, ahInY - 4, "IN", "end");
+    D.dot(modX, ahInY, "#ef6c00");
+
+    /* --- wire steps: one real wire per step, in build order.
+       Same coordinates as before -- only the grouping into named,
+       orderable steps is new. --- */
+    const jPlusX = colX(0), jMinusX = colX(N_COLS - 1);
+    const sdaX = 792, sclX = 806;
+    const steps = [
+      { label: "Battery (+) → TP4056 B+ pad", run: () => { W.orthWire([[60, 75], [60, 95]], "#d32f2f"); W.dot(60, 75, "#d32f2f"); W.dot(60, 95, "#d32f2f"); } },
+      { label: "Battery (−) → TP4056 B− pad", run: () => { W.orthWire([[150, 75], [150, 95]], "#333"); W.dot(150, 75, "#333"); W.dot(150, 95, "#333"); } },
+      { label: "TP4056 OUT+ → ESP32 5V pin", run: () => { W.orthWire([[60, 165], [60, 185]], "#d32f2f"); W.dot(60, 165, "#d32f2f"); W.dot(60, 185, "#d32f2f"); } },
+      { label: "TP4056 OUT− → ESP32 G pin", run: () => { W.orthWire([[150, 165], [150, 185]], "#333"); W.dot(150, 165, "#333"); W.dot(150, 185, "#333"); } },
+      { label: "Rail jumper: top + rail (col 1) → bottom + rail (col 1) -- makes the bottom rail live", run: () => {
+          W.orthWire([[jPlusX, topHoleY1], [boardX + 8, topHoleY1], [boardX + 8, botHoleY1], [jPlusX, botHoleY1]], "#d32f2f");
+          W.dot(jPlusX, topHoleY1, "#d32f2f"); W.dot(jPlusX, botHoleY1, "#d32f2f");
+        } },
+      { label: "Rail jumper: top − rail (col 30) → bottom − rail (col 30)", run: () => {
+          W.orthWire([[jMinusX, topHoleY2], [boardX + boardW - 8, topHoleY2], [boardX + boardW - 8, botHoleY2], [jMinusX, botHoleY2]], "#333");
+          W.dot(jMinusX, topHoleY2, "#333"); W.dot(jMinusX, botHoleY2, "#333");
+        } },
+      { label: "ESP32 3V3 → breadboard + rail, column 4", run: () => { W.orthWire([[espRightX, 230], [colX(3), 230], [colX(3), topHoleY1]], "#d32f2f"); W.dot(colX(3), topHoleY1, "#d32f2f"); } },
+      { label: "ESP32 GND → breadboard − rail, column 6", run: () => { W.orthWire([[espRightX, 270], [colX(5), 270], [colX(5), topHoleY2]], "#333"); W.dot(colX(5), topHoleY2, "#333"); } },
+      { label: "GY-MAX30102 VIN → breadboard + rail, column 27", run: () => { W.orthWire([[modX, 78], [colX(26), 78], [colX(26), topHoleY1]], "#d32f2f"); W.dot(colX(26), topHoleY1, "#d32f2f"); } },
+      { label: "GY-MAX30102 GND → breadboard − rail, column 25", run: () => { W.orthWire([[modX, 100], [colX(24), 100], [colX(24), topHoleY2]], "#333"); W.dot(colX(24), topHoleY2, "#333"); } },
+      { label: "MPU6050 VCC → breadboard + rail, column 27 (bottom rail)", run: () => { W.orthWire([[modX, 258], [colX(26), 258], [colX(26), botHoleY1]], "#d32f2f"); W.dot(colX(26), botHoleY1, "#d32f2f"); } },
+      { label: "MPU6050 GND → breadboard − rail, column 25 (bottom rail)", run: () => { W.orthWire([[modX, 280], [colX(24), 280], [colX(24), botHoleY2]], "#333"); W.dot(colX(24), botHoleY2, "#333"); } },
+      { label: "AH024 VCC → breadboard + rail, column 11 (bottom rail)", run: () => { W.orthWire([[modX, 458], [colX(10), 458], [colX(10), botHoleY1]], "#d32f2f"); W.dot(colX(10), botHoleY1, "#d32f2f"); } },
+      { label: "AH024 GND → breadboard − rail, column 13 (bottom rail)", run: () => { W.orthWire([[modX, 480], [colX(12), 480], [colX(12), botHoleY2]], "#333"); W.dot(colX(12), botHoleY2, "#333"); } },
+      { label: "ESP32 GPIO8 (SDA) → GY-MAX30102 SDA + MPU6050 SDA -- shared bus, bypasses the board", run: () => {
+          W.orthWire([[espRightX, 320], [sdaX, 320]], "#2e7d32"); W.dot(espRightX, 320, "#2e7d32");
+          W.orthWire([[sdaX, 144], [sdaX, 324]], "#2e7d32");
+          W.orthWire([[modX, 144], [sdaX, 144]], "#2e7d32"); W.dot(sdaX, 144, "#2e7d32"); W.dot(sdaX, 324, "#2e7d32");
+          W.orthWire([[modX, 324], [sdaX, 324]], "#2e7d32");
+          W.dot(sdaX, 320, "#2e7d32");
+        } },
+      { label: "ESP32 GPIO9 (SCL) → GY-MAX30102 SCL + MPU6050 SCL -- shared bus, bypasses the board", run: () => {
+          W.orthWire([[espRightX, 370], [sclX, 370]], "#1565c0"); W.dot(espRightX, 370, "#1565c0");
+          W.orthWire([[sclX, 122], [sclX, 370]], "#1565c0");
+          W.orthWire([[modX, 122], [sclX, 122]], "#1565c0"); W.dot(sclX, 122, "#1565c0"); W.dot(sclX, 370, "#1565c0");
+          W.orthWire([[modX, 302], [sclX, 302]], "#1565c0"); W.dot(sclX, 302, "#1565c0");
+        } },
+      { label: "ESP32 GPIO3 → AH024 IN -- drives the vibration motor", run: () => {
+          W.orthWire([[espRightX, 420], [750, 420], [750, ahInY], [modX, ahInY]], "#ef6c00");
+          W.dot(espRightX, 420, "#ef6c00");
+        } }
+    ];
+
+    return { wireLayer, steps };
+  }
+
+  buildSchematic(document.getElementById("schematic"));
+  const breadboardData = buildBreadboardView(document.getElementById("breadboard"));
+  const bbSteps = breadboardData.steps;
+  const bbWireLayer = breadboardData.wireLayer;
+
+  /* renderWiresUpTo(n): clears the wire layer and re-runs steps 0..n.
+     n === bbSteps.length - 1 (or any out-of-range high value) shows
+     the complete diagram -- this is also what "Build mode off" uses. */
+  function renderWiresUpTo(n) {
+    while (bbWireLayer.firstChild) bbWireLayer.removeChild(bbWireLayer.firstChild);
+    const last = Math.min(n, bbSteps.length - 1);
+    for (let i = 0; i <= last; i++) bbSteps[i].run();
+  }
+  renderWiresUpTo(bbSteps.length - 1); /* full diagram by default */
+
+  const schematicSvg = document.getElementById("schematic");
+  const breadboardSvg = document.getElementById("breadboard");
+  const viewSchematicBtn = document.getElementById("viewSchematicBtn");
+  const viewBreadboardBtn = document.getElementById("viewBreadboardBtn");
+  const buildControls = document.getElementById("buildControls");
+  viewSchematicBtn.addEventListener("click", function () {
+    schematicSvg.style.display = "block";
+    breadboardSvg.style.display = "none";
+    viewSchematicBtn.classList.add("active");
+    viewBreadboardBtn.classList.remove("active");
+    buildControls.style.display = "none";
+  });
+  viewBreadboardBtn.addEventListener("click", function () {
+    schematicSvg.style.display = "none";
+    breadboardSvg.style.display = "block";
+    viewBreadboardBtn.classList.add("active");
+    viewSchematicBtn.classList.remove("active");
+    buildControls.style.display = "block";
+  });
+  buildControls.style.display = "none"; /* schematic is the default active view */
+
+  /* --- Build mode controller --- */
+  const buildModeToggle = document.getElementById("buildModeToggle");
+  const stepNav = document.getElementById("stepNav");
+  const stepCounter = document.getElementById("stepCounter");
+  const stepInstruction = document.getElementById("stepInstruction");
+  const prevStepBtn = document.getElementById("prevStepBtn");
+  const nextStepBtn = document.getElementById("nextStepBtn");
+  const showAllBtn = document.getElementById("showAllBtn");
+  let currentStep = 0;
+
+  function refreshStepUI() {
+    stepCounter.textContent = `Step ${currentStep + 1} of ${bbSteps.length}`;
+    stepInstruction.textContent = bbSteps[currentStep].label;
+    prevStepBtn.disabled = currentStep === 0;
+    nextStepBtn.disabled = currentStep === bbSteps.length - 1;
+  }
+
+  buildModeToggle.addEventListener("change", function () {
+    if (this.checked) {
+      currentStep = 0;
+      renderWiresUpTo(currentStep);
+      stepNav.style.display = "flex";
+      refreshStepUI();
+    } else {
+      renderWiresUpTo(bbSteps.length - 1);
+      stepNav.style.display = "none";
+      stepInstruction.textContent = "";
+    }
+  });
+  prevStepBtn.addEventListener("click", function () {
+    if (currentStep > 0) { currentStep--; renderWiresUpTo(currentStep); refreshStepUI(); }
+  });
+  nextStepBtn.addEventListener("click", function () {
+    if (currentStep < bbSteps.length - 1) { currentStep++; renderWiresUpTo(currentStep); refreshStepUI(); }
+  });
+  showAllBtn.addEventListener("click", function () {
+    buildModeToggle.checked = false;
+    renderWiresUpTo(bbSteps.length - 1);
+    stepNav.style.display = "none";
+    stepInstruction.textContent = "";
+  });
+
+  /* ---------------------------------------------------------------
+     Live simulation
+     --------------------------------------------------------------- */
+  const TICK_MS = 50;
+  let running = false, booted = false;
+  let fingerOn = true;
+  let tickCount = 0, cycleLen = 17, cycleStart = 0, lastBeatTime = null, bpm = 0;
+  let shockTicksLeft = 0;
+  let timer = null;
+
+  const ppgSvg = document.getElementById("ppgChart");
+  const N_POINTS = 120;
+  const ppgBuf = new Array(N_POINTS).fill(50);
+  const ppgLine = el("polyline", { fill: "none", stroke: "#c0392b", "stroke-width": 2 });
+  ppgSvg.appendChild(ppgLine);
+  function redrawPPG() {
+    const pts = ppgBuf.map((v, i) => `${(i / (N_POINTS - 1) * 300).toFixed(1)},${(90 - v).toFixed(1)}`).join(" ");
+    ppgLine.setAttribute("points", pts);
+  }
+  redrawPPG();
+
+  function triangleWave(idx, len, amp) {
+    const half = len / 2;
+    const pos = idx % len;
+    return pos < half ? (pos / half) * 2 * amp - amp : amp - ((pos - half) / half) * 2 * amp;
+  }
+
+  const logEl = document.getElementById("log");
+  function logLine(msg) {
+    const t = (tickCount * TICK_MS / 1000).toFixed(1);
+    logEl.textContent += `[${t}s] ${msg}\n`;
+    logEl.scrollTop = logEl.scrollHeight;
+    const lines = logEl.textContent.split("\n");
+    if (lines.length > 60) logEl.textContent = lines.slice(lines.length - 60).join("\n");
+  }
+
+  const bpmValueEl = document.getElementById("bpmValue");
+  const fingerStatusEl = document.getElementById("fingerStatus");
+  const axVal = document.getElementById("axVal"), ayVal = document.getElementById("ayVal"), azVal = document.getElementById("azVal");
+  const gxVal = document.getElementById("gxVal"), gyVal = document.getElementById("gyVal"), gzVal = document.getElementById("gzVal");
+  const totalGVal = document.getElementById("totalGVal");
+
+  function jitter(base, amt) { return base + (Math.random() - 0.5) * amt; }
+
+  let shockLogged = false;
+
+  function tick() {
+    tickCount++;
+
+    /* --- heart rate --- */
+    if (fingerOn) {
+      const phase = tickCount - cycleStart;
+      const val = 50 + triangleWave(phase, cycleLen, 32);
+      ppgBuf.shift(); ppgBuf.push(val);
+      if (phase >= cycleLen) {
+        const now = performance.now();
+        if (lastBeatTime !== null) {
+          bpm = Math.round(60 / ((now - lastBeatTime) / 1000));
+        }
+        lastBeatTime = now;
+        cycleStart = tickCount;
+        cycleLen = 15 + Math.floor(Math.random() * 5); /* 15-19 ticks -> ~63-80bpm */
+        bpmValueEl.textContent = bpm || "--";
+        logLine(bpm ? `Beat detected, BPM=${bpm}` : "Beat detected, calculating BPM...");
+        logLine(`Motor: 40ms pulse (beat tick)`);
+      }
+      fingerStatusEl.textContent = "contact ok";
+      fingerStatusEl.className = "status-pill on";
+    } else {
+      ppgBuf.shift(); ppgBuf.push(50);
+      bpmValueEl.textContent = "--";
+      fingerStatusEl.textContent = "no contact";
+      fingerStatusEl.className = "status-pill";
+    }
+    redrawPPG();
+
+    /* --- motion --- */
+    let ax = jitter(0.2, 0.6), ay = jitter(-0.1, 0.6), az = jitter(9.8, 0.6);
+    let gx = jitter(0, 0.1), gy = jitter(0, 0.1), gz = jitter(0, 0.1);
+    if (shockTicksLeft > 0) {
+      ax = 20; ay = 18; az = 15; /* magnitude ~3.14g, clears the 2.50g alert threshold */
+      shockTicksLeft--;
+    }
+    const totalG = Math.sqrt(ax * ax + ay * ay + az * az) / 9.80665;
+    axVal.textContent = ax.toFixed(2); ayVal.textContent = ay.toFixed(2); azVal.textContent = az.toFixed(2);
+    gxVal.textContent = gx.toFixed(2); gyVal.textContent = gy.toFixed(2); gzVal.textContent = gz.toFixed(2);
+    totalGVal.textContent = totalG.toFixed(2);
+
+    if (totalG > 2.5) {
+      if (!shockLogged) {
+        logLine(`Shock detected! Accel=${totalG.toFixed(2)}g`);
+        logLine(`Motor: 300ms pulse (shock alert)`);
+        shockLogged = true;
+      }
+    } else {
+      shockLogged = false;
+    }
+  }
+
+  document.getElementById("startBtn").addEventListener("click", function () {
+    running = !running;
+    if (running) {
+      if (!booted) {
+        logLine("=== LD Haptic Wristband Prototype booting ===");
+        logLine("[OK] MAX30102 ready.");
+        logLine("[OK] MPU6050 ready.");
+        logLine("=== Setup complete, entering main loop ===");
+        booted = true;
+      } else {
+        logLine("Resumed.");
+      }
+      this.textContent = "Pause";
+      timer = setInterval(tick, TICK_MS);
+    } else {
+      logLine("Paused.");
+      this.textContent = "Start";
+      clearInterval(timer);
+    }
+  });
+
+  document.getElementById("fingerToggle").addEventListener("change", function () {
+    fingerOn = this.checked;
+    logLine(fingerOn ? "Finger detected on sensor." : "Finger removed from sensor.");
+  });
+
+  document.getElementById("shockBtn").addEventListener("click", function () {
+    shockTicksLeft = 6; /* ~300ms at 20Hz */
+  });
+})();
+</script>
+</body>
+</html>
