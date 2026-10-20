@@ -14,9 +14,14 @@ Steps:
    powershell -NoProfile -Command "$c = Get-NetTCPConnection -State Listen -LocalPort 8090 -ErrorAction SilentlyContinue; if ($c) { Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue }"
    ```
 
-2. **Start the app in the background** from the project dir:
+2. **Check the key file exists**: `app/.env` must contain `GOOGLE_MAPS_API_KEY=...`.
+   If it is missing, tell the user to copy `app/.env.example` to `app/.env` and
+   fill in the key (the app still starts without it, but maps and routing are off).
+   Never print the key.
+
+   **Start the app in the background** from the project dir:
    ```
-   cd "c:/Users/USER/Desktop/Sense-Safe/app" && flutter run -d web-server --web-port=8090
+   cd "c:/Users/USER/Desktop/Sense-Safe/app" && flutter run -d web-server --web-port=8090 --dart-define-from-file=.env
    ```
    Run it with `run_in_background: true` (it's long-running — do not block on it).
 

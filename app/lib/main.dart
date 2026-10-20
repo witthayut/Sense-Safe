@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app/maps_config.dart';
+import 'app/maps_loader.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'firebase_options.dart';
@@ -11,6 +13,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await loadGoogleMaps(googleMapsApiKey);
   runApp(const ProviderScope(child: HapticDriveApp()));
 }
 

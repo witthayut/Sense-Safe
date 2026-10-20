@@ -5,10 +5,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/route_maneuver.dart';
 import 'directions_common.dart';
 
-/// Web fetch: call the in-page `google.maps.DirectionsService` (loaded via the
-/// Maps JavaScript API <script> in web/index.html). This avoids the CORS block
+/// Web fetch: call the in-page `google.maps.DirectionsService` (the Maps
+/// JavaScript API is injected at startup by app/maps_loader.dart). This avoids the CORS block
 /// that prevents the browser from calling the Directions *web service* over
-/// HTTP. [apiKey] is unused here — the key lives in the <script> tag.
+/// HTTP. [apiKey] is unused here — the loaded script already carries it.
 Future<List<RawRoute>> fetchRawRoutes({
   required String origin,
   required String destination,
