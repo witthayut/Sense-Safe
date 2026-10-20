@@ -1,89 +1,121 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/wristband.dart';
+import 'assessment_controller.dart';
 import 'ble_controller.dart';
+import 'haptic_cue_player.dart';
 
-/// How many calibration pulses ("patterns") the user maps per wrist.
+/// How many sample strengths the wearer is offered per wrist.
 const int kCalibrationPatternCount = 5;
 
-/// Per-wrist "cold-start" calibration state.
+/// The sample strengths, weakest to strongest.
 ///
-/// During calibration the user taps each pulse and confirms they feel it; the
-/// felt pulses get added to the wrist's [mappedFor] set. When every pattern is
-/// mapped the wrist is ready and "Finish Setup" unlocks.
+/// Deliberately spans the motor's ENTIRE usable range — 0.0 and 1.0 are duty
+/// 135 and 255 after the firmware's floor remap. The old scale started at
+/// 0.30 and stopped short at both ends, which meant a very sensitive wearer
+/// and a very insensitive one both fell outside it and got a meaningless
+/// answer.
+double calibrationIntensity(int index) =>
+    index / (kCalibrationPatternCount - 1); // 0, .25, .5, .75, 1
+
+/// Per-wrist cold-start calibration.
+///
+/// This screen used to be a checklist: tap all five pulses, unlock Finish,
+/// throw the answer away. It now measures something real — the WEAKEST level
+/// this person can actually feel — because the perception floor turned out to
+/// vary by wearer, strap tightness and motor, and hardcoding one number for
+/// everybody is what made several cue levels silent in the first place.
 class CalibrationState {
-  const CalibrationState({
-    this.leftMapped = const {},
-    this.rightMapped = const {},
-  });
+  const CalibrationState({this.leftFloor, this.rightFloor});
 
-  /// Indices (0..[kCalibrationPatternCount]-1) of patterns mapped on each side.
-  final Set<int> leftMapped;
-  final Set<int> rightMapped;
+  /// Index of the weakest level felt on each wrist, or null if not measured.
+  final int? leftFloor;
+  final int? rightFloor;
 
-  Set<int> mappedFor(Wrist wrist) =>
-      wrist == Wrist.left ? leftMapped : rightMapped;
+  int? floorFor(Wrist wrist) =>
+      wrist == Wrist.left ? leftFloor : rightFloor;
 
-  int countFor(Wrist wrist) => mappedFor(wrist).length;
+  bool isCompleteFor(Wrist wrist) => floorFor(wrist) != null;
 
-  /// 0.0 .. 1.0 — share of patterns mapped for this wrist.
-  double progressFor(Wrist wrist) =>
-      countFor(wrist) / kCalibrationPatternCount;
+  bool get bothMeasured => leftFloor != null && rightFloor != null;
 
-  bool isCompleteFor(Wrist wrist) =>
-      countFor(wrist) >= kCalibrationPatternCount;
-
-  CalibrationState copyWith({Set<int>? leftMapped, Set<int>? rightMapped}) {
-    return CalibrationState(
-      leftMapped: leftMapped ?? this.leftMapped,
-      rightMapped: rightMapped ?? this.rightMapped,
-    );
+  /// The value stored on the profile: the HIGHER of the two wrists.
+  ///
+  /// Conservative on purpose. A cue has to be felt on both sides, so the less
+  /// sensitive wrist sets the floor; using the average would leave one wrist
+  /// below its own threshold and a turn signal silent on that side.
+  double? get floorIntensity {
+    final l = leftFloor, r = rightFloor;
+    if (l == null || r == null) return null;
+    return calibrationIntensity(l > r ? l : r);
   }
+
+  CalibrationState copyWith({
+    int? leftFloor,
+    int? rightFloor,
+  }) =>
+      CalibrationState(
+        leftFloor: leftFloor ?? this.leftFloor,
+        rightFloor: rightFloor ?? this.rightFloor,
+      );
 }
 
 /// Drives the cold-start calibration flow.
 ///
-/// Owns the calibration *state*; the actual buzz is delegated to
-/// [BleController] so this layer stays hardware-agnostic. In Phase 3 the only
-/// thing that changes is what `testVibration` does under the hood.
+/// Owns the calibration *state*; the buzz itself is delegated to
+/// [BleController] so this layer stays hardware-agnostic.
 class CalibrationController extends Notifier<CalibrationState> {
   @override
   CalibrationState build() => const CalibrationState();
 
-  /// Each pattern is felt at a progressively stronger intensity so the user
-  /// learns to distinguish the range. 0 -> soft, last -> full strength.
-  double intensityForPattern(int patternIndex) {
-    if (kCalibrationPatternCount <= 1) return 1.0;
-    final t = patternIndex / (kCalibrationPatternCount - 1);
-    return (0.3 + t * 0.7).clamp(0.0, 1.0);
-  }
-
-  /// Fire the pulse for [patternIndex] on [wrist] and, if it actually buzzed,
-  /// mark it mapped. Returns false when the band isn't connected (so the UI
-  /// can prompt the user to connect first); the pattern stays unmapped.
-  Future<bool> mapPattern(Wrist wrist, int patternIndex) async {
-    if (patternIndex < 0 || patternIndex >= kCalibrationPatternCount) {
-      return false;
-    }
+  /// Play level [index] on [wrist] and record it as the weakest level felt
+  /// there. Tapping a different level simply replaces the answer, so the
+  /// wearer can hunt up and down freely, and tapping the SAME level again
+  /// just replays it — which is how someone gets a second opinion without
+  /// the test itself becoming easier.
+  ///
+  /// One pulse, never two. The weakest thing this app ever sends is a single
+  /// approach tap, so that is exactly what the floor has to be measured
+  /// against. Two pulses would give the wearer two chances to notice one
+  /// level, they would settle a rung lower than they should, and the real
+  /// single tap would then slip past them on the road.
+  ///
+  /// Returns false when the band is not connected, so the UI can say so —
+  /// note that a true return means the packet went out, NOT that the wearer
+  /// felt anything. Only their tap can mean that, which is exactly why the
+  /// tap is the measurement.
+  Future<bool> selectFloor(Wrist wrist, int index) async {
+    if (index < 0 || index >= kCalibrationPatternCount) return false;
 
     final ok = await ref.read(bleControllerProvider.notifier).testVibration(
           wrist,
-          intensity: intensityForPattern(patternIndex),
+          intensity: calibrationIntensity(index),
+          // Bound to the real cue, not repeated here, so the two can never
+          // drift apart silently.
+          durationMs: HapticCuePlayer.approachTapMs,
         );
     if (!ok) return false;
 
-    final updated = {...state.mappedFor(wrist), patternIndex};
     state = wrist == Wrist.left
-        ? state.copyWith(leftMapped: updated)
-        : state.copyWith(rightMapped: updated);
+        ? CalibrationState(leftFloor: index, rightFloor: state.rightFloor)
+        : CalibrationState(leftFloor: state.leftFloor, rightFloor: index);
+
+    // Once both wrists are known the profile can carry a real floor instead
+    // of the shipped default.
+    final floor = state.floorIntensity;
+    if (floor != null) {
+      ref.read(assessmentControllerProvider.notifier).updateTuning(
+            floorIntensity: floor,
+          );
+    }
     return true;
   }
 
-  /// Clear the mapped patterns for one wrist (used by "start over").
-  void resetFor(Wrist wrist) {
+  /// Start over on one wrist.
+  void clear(Wrist wrist) {
     state = wrist == Wrist.left
-        ? state.copyWith(leftMapped: const {})
-        : state.copyWith(rightMapped: const {});
+        ? CalibrationState(rightFloor: state.rightFloor)
+        : CalibrationState(leftFloor: state.leftFloor);
   }
 }
 

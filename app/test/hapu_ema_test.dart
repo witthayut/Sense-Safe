@@ -59,16 +59,35 @@ void main() {
       expect(p.intensity, closeTo(1.0, 0.01));
     });
 
-    test('repeated "too strong" never goes below the Settings minimum (0.1)',
+    // The lower bound used to be a flat 0.1, which on this hardware is duty
+    // 26 — silent. A wearer who kept answering "too strong" could walk their
+    // own band down until it stopped cueing them at all, with the app still
+    // reporting every turn as delivered. The bound is now their measured
+    // perception floor.
+    test('repeated "too strong" stops at the measured floor, not at silence',
         () {
       var p = profile(intensity: 0.2);
       for (var trip = 0; trip < 50; trip++) {
         final r =
             HapuEma.apply(p, survey(strength: SurveyStrength.tooStrong));
-        expect(r.intensity, greaterThanOrEqualTo(HapuEma.minIntensity));
+        expect(r.intensity,
+            greaterThanOrEqualTo(VibrationProfile.defaultFloorIntensity));
         p = p.copyWith(intensity: r.intensity);
       }
-      expect(p.intensity, closeTo(HapuEma.minIntensity, 0.01));
+      expect(
+          p.intensity, closeTo(VibrationProfile.defaultFloorIntensity, 0.01));
+    });
+
+    test('a wearer with a higher measured floor never drops below it', () {
+      // Calibration found this person needs 0.75 (duty 225) to feel anything.
+      var p = profile(intensity: 0.95).copyWith(floorIntensity: 0.75);
+      for (var trip = 0; trip < 50; trip++) {
+        final r =
+            HapuEma.apply(p, survey(strength: SurveyStrength.tooStrong));
+        p = p.copyWith(intensity: r.intensity);
+      }
+      expect(p.intensity, closeTo(0.75, 0.01),
+          reason: 'tuning must never land below what this wrist can feel');
     });
   });
 

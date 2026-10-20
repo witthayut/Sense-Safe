@@ -25,8 +25,10 @@ class HapuEma {
   /// (seconds). Net effect per trip ≈ ±0.9 s.
   static const int leadStep = 3;
 
-  /// Clamps match the Settings screen's slider ranges exactly, so EMA can
-  /// never produce a value the UI can't represent.
+  /// Absolute backstop. The real lower bound is the wearer's measured
+  /// [VibrationProfile.floorIntensity] — without it, EMA could walk the
+  /// intensity down over a few trips until the band went silent while the
+  /// app still believed it was cueing.
   static const double minIntensity = 0.1;
   static const double maxIntensity = 1.0;
   static const int minLeadSeconds = 2;
@@ -44,8 +46,10 @@ class HapuEma {
       final target = survey.strength == SurveyStrength.tooSoft
           ? profile.intensity + intensityStep
           : profile.intensity - intensityStep;
+      final floor =
+          profile.floorIntensity.clamp(minIntensity, maxIntensity).toDouble();
       intensity = (alpha * target + (1 - alpha) * profile.intensity)
-          .clamp(minIntensity, maxIntensity)
+          .clamp(floor, maxIntensity)
           .toDouble();
     }
 

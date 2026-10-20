@@ -155,12 +155,14 @@ class AssessmentController extends Notifier<AssessmentState> {
     double? intensity,
     int? leadTimeSeconds,
     HapticRhythm? rhythm,
+    double? floorIntensity,
   }) {
     final base = state.profile ?? _defaultProfile;
     final updated = base.copyWith(
       intensity: intensity,
       leadTimeSeconds: leadTimeSeconds,
       rhythm: rhythm,
+      floorIntensity: floorIntensity,
     );
     state = state.copyWith(profile: updated);
     _save(updated);

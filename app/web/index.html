@@ -32,10 +32,9 @@
   <title>haptic_drive</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Google Maps JavaScript API (for google_maps_flutter on web).
-       Replace YOUR_GOOGLE_MAPS_API_KEY with your Maps JavaScript API key. -->
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIUpO5Wc_gIEZjcpGg9Ep-IkmDhmhLsvg&libraries=places"></script>
+  <!-- Google Maps JavaScript API is loaded from Dart at startup
+       (lib/app/maps_loader.dart) with the key from app/.env, so the key
+       never has to be committed. -->
 </head>
 <body>
   <!--

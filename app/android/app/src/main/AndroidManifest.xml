@@ -13,7 +13,7 @@
              Replace YOUR_GOOGLE_MAPS_API_KEY with your Android Maps key. -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBIUpO5Wc_gIEZjcpGg9Ep-IkmDhmhLsvg"/>
+            android:value="ANDROID_MAPS_KEY_NOT_SET"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

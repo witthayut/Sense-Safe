@@ -89,11 +89,19 @@ class BleController extends Notifier<BleState> {
 
   /// Fire a test vibration on one wrist. Returns false if not connected.
   /// Real implementation: write the vibrate characteristic over BLE.
-  Future<bool> testVibration(Wrist wrist, {double intensity = 0.7}) async {
+  ///
+  /// [durationMs] matters during calibration: the buzz used to measure a
+  /// wearer's floor has to be the same shape as the buzz they will actually
+  /// receive, or the number measured describes a signal the app never sends.
+  Future<bool> testVibration(
+    Wrist wrist, {
+    double intensity = 0.7,
+    int durationMs = 350,
+  }) async {
     final band = wrist == Wrist.left ? state.left : state.right;
     if (!band.isConnected) return false;
     // Simulated buzz.
-    await Future<void>.delayed(const Duration(milliseconds: 350));
+    await Future<void>.delayed(Duration(milliseconds: durationMs));
     return true;
   }
 

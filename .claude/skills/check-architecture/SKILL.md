@@ -5,8 +5,8 @@ description: Review the folder structure and architecture of the Haptic Drive Fl
 
 Review whether the Haptic Drive codebase is **well organized** and report concrete, ranked actions to reduce complexity — **without breaking anything**. This skill is read-only by default: it analyzes and recommends; it only edits files if the user explicitly asks after seeing the report.
 
-Project dir: `c:\Users\USER\Desktop\Sense&Safe\app`
-Reference structure: `c:\Users\USER\Desktop\Sense&Safe\planning\Tech-Plan.md` (section 4 "Suggested project structure")
+Project dir: `c:\Users\USER\Desktop\Sense-Safe\app`
+Reference structure: `c:\Users\USER\Desktop\Sense-Safe\planning\Tech-Plan.md` (section 4 "Suggested project structure")
 
 Run every section below from `app/lib`. Base findings on actual command output, not assumption.
 
@@ -15,7 +15,7 @@ Run every section below from `app/lib`. Base findings on actual command output, 
 ## Section 1 — Map the structure
 
 ```
-cd "c:/Users/USER/Desktop/Sense&Safe/app/lib"
+cd "c:/Users/USER/Desktop/Sense-Safe/app/lib"
 find . -name "*.dart" | sort | while read f; do printf "%5s  %s\n" "$(wc -l < "$f")" "$f"; done
 ```
 
@@ -77,7 +77,7 @@ Beyond folders, judge the design:
 
 ## Section 7 — Report
 
-Write `c:\Users\USER\Desktop\Sense&Safe\planning\reviews\<YYYY-MM-DD>-architecture.md` and present it. Grade overall **Green / Yellow / Red**, then a ranked action table where every row has: action, why, evidence (file), and **risk** (Safe / Low / Medium). Use these buckets:
+Write `c:\Users\USER\Desktop\Sense-Safe\planning\reviews\<YYYY-MM-DD>-architecture.md` and present it. Grade overall **Green / Yellow / Red**, then a ranked action table where every row has: action, why, evidence (file), and **risk** (Safe / Low / Medium). Use these buckets:
 
 ```
 # Haptic Drive — Architecture Review (<date>)

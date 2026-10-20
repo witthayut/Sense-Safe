@@ -49,3 +49,9 @@ app/android/app/release
 
 # LibreOffice / Office lock files
 .~lock.*#
+
+# Local secrets — real keys live only on your machine.
+# app/.env.example is the committed template.
+.env
+.env.*
+!.env.example

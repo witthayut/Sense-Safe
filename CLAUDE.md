@@ -10,12 +10,12 @@ updated as work progresses so future sessions don't have to re-derive state.
 > Most of THIS file covers the **Flutter app** in `app/`: what is actually
 > built, versus the full vision described there.
 
-## Repo layout (restructured 2026-09-07)
+## Repo layout (restructured 2026-09-07, folder renamed 2026-09-08)
 
 This repository is the whole project, not just the app. One root, six folders:
 
 ```
-Sense&Safe/            ← git root = github.com/witthayut/Sense-Safe
+Sense-Safe/            ← git root = github.com/witthayut/Sense-Safe
   app/                  Flutter app (phone)      — was the old haptic_drive/
   firmware/             Arduino (ESP32-C3 wristbands)
   report/               the report submitted to the advisor + PROJECT_BRIEF
@@ -37,9 +37,138 @@ for people with learning differences (dyslexia, ADHD, dyscalculia, dyspraxia);
 a 6-question onboarding assessment builds a personal "vibration profile" that
 tunes buzz intensity, lead time, and rhythm.
 
+> **Status 2026-10-10:** this paragraph describes the ORIGINAL driving-first
+> framing, which is what the code implements today. A pivot to an everyday
+> task-support copilot for Pure LD was proposed 2026-09-13 (next section) and
+> is the direction all design discussion since then has followed; the user
+> has not yet confirmed it officially, so issues/report are not re-scoped.
+
 The app you're working in is a **prototype/scaffold** of a much larger vision
 (dashcam object detection, stress-adaptive haptics, voice control — see
 `report/PROJECT_BRIEF.md`); only the pieces below are actually built so far.
+
+## ⚠️ Pivot proposed 2026-09-13 — "Everyday Life & Mobility Copilot for Pure LD"
+
+Feedback (from the validation work started Sept 2026): haptic *driving*
+navigation serves a very small group — few adults with LD drive, and the app
+is useful only while driving, so usage frequency is low. The user brought a
+full spec for a broader product (**status: proposal; not yet confirmed as the
+new scope — ask before re-scoping issues or the report**). Spec saved
+verbatim at [`planning/Pivot-2026-09-13-Everyday-Copilot.md`](planning/Pivot-2026-09-13-Everyday-Copilot.md).
+
+In one paragraph: target narrows to **Pure LD** (dyslexia/dysgraphia/
+dyscalculia, explicitly *no* ADHD/ASD — note the old design's stress-adaptive
+haptics targeted ADHD); scope widens to everyday tasks — phone app ("The
+Brain": OCR → plain-language summary → one-step-at-a-time checklist,
+scheduling, RAG Q&A, filing, error guard, TTS) + wristband ("Physical
+Co-pilot": left/right cueing for outdoor walking/transit, **wrist-flick
+check-off via the MPU-6050 gyro** (was double tap; changed 2026-09-13), HR
+grounding via MAX30102 only when still). Medical-scope boundary
+is explicit (task-support tool, never diagnosis; "situational anxiety", never
+"panic detection"). MVP happy path: photo of appointment doc → AI checklist →
+wrist buzz per step → wrist flick confirms → recorded.
+
+**Decisions already made by the user (all 2026-09-13):**
+1. No indoor navigation — mobility is outdoor walking + public transit only.
+2. Two bands stay; side = which wrist buzzes; both wrists = never a turn
+   (arrival, transit hop-off pre-alert, missed stop).
+3. Confirmation gesture = wrist flick/twist (gyro roll axis), not double tap.
+4. No caregiver layer — the LD user operates everything alone.
+5. Error Guard = One-Tap Clipboard Guard + Uncertainty Alert + Confirmation
+   & History; no background clipboard monitoring.
+
+**Still open (user's call):** (a) is the pivot officially confirmed (advisor),
+(b) is the wristband the core or an accessory to the AI app, (c) which LLM
+provider / billing for "The Brain".
+
+Claude's assessment (2026-09-13, details in that session's reply):
+- **Carries over almost everything built**: BLE controller + wrist safety
+  invariant + cue ladder + personal floor calibration → "Mobility mode";
+  MAX30102 v3 `win` estimator + quality gate = the spec's rule #2; HAPU EMA
+  pattern = "personalized baseline"; Firebase per-user model extends to docs.
+- **Hard blocker**: "The Brain" needs a multimodal LLM. This Google account
+  has **no Gemini quota** (see Gemini API section) → the deferred billing /
+  provider decision becomes unavoidable. On-device ML Kit OCR is a free
+  fallback for the demo, not for the LLM parts.
+- **Indoor navigation is OUT — user decided 2026-09-13** ("ยากมากเรื่องการหา
+  API และข้อมูล"). The spec's "เดินในอาคาร" wording is superseded. Mobility =
+  outdoor only (Google Directions walking/driving), so the SAFETY INVARIANT
+  (side from Google's maneuver string) stays intact. Never promise indoor.
+- **Scope risk**: ~12 app features + 3 wearable functions; the spec's own
+  MVP path is the right cut. Defer RAG/citation, semantic filing, lead-time
+  scheduling, audit trail, confidence scoring past the MVP.
+- **Immediate concrete impact**: PROTOCOL.md (#9, not yet written) must
+  become **two-way** (band→phone notify: gesture events, HR windows,
+  battery, button). Next hardware piece = the confirmation-gesture detector
+  as `firmware/test/gesture_test` with a Python bench first (same method
+  as v3). **Gesture DECIDED 2026-09-13: wrist flick/twist (gyro roll axis),
+  NOT double tap** — the user's basic MPU-6050 sketch already exists at
+  `firmware/test/mpu-6050/Test-Mpu.ino` (folder/file name mismatch, fix
+  before opening in the IDE). Spec rule #1's tap filters map onto the
+  flick: isolate the roll axis instead of Z, require twist-and-return
+  within a short window instead of two taps, keep stillness pre-condition,
+  listening window, haptic ack and the 3 s button undo. Full revised rule
+  (roll-axis isolation, **bi-directional zero-crossing**, out-and-back
+  within **150-400 ms**, peak-rate threshold TBD by measurement) = addendum C
+  in the planning file. Peak threshold and which gyro axis is "roll" are
+  measured, not assumed — same method as the motor floor.
+- The 6-question assessment's trait labels ("Dyspraxia-leaning") conflict
+  with the new medical boundary → reword as preferences or remove.
+- AH024 module already contains its driver transistor (README) — rule #3's
+  "never drive the motor from a GPIO" is satisfied; no rewiring needed.
+
+**Round 2 (same day) — Mobility = "Pedestrian & Transit Mode" + "Transit
+Hop-off Guard"** (addendum B in the same planning file): outdoor walking
+turn-by-turn via Google/Mapbox, and a pre-alert 300-500 m before the target
+bus stop / BTS-MRT station, with missed-stop recovery and a time-based
+fallback when GPS dies underground (MRT). Claude's flags:
+- **Direction-by-pattern conflicts with the SAFETY INVARIANT.** The addendum
+  proposes "2 short = left, 1 long = right" on (apparently) one band. Our
+  design encodes side as *which wrist buzzes* (no decoding; exactly the
+  left/right mapping LD users struggle with) and pulse *count* as urgency
+  (v2: PREP 1 / ALERT 2 / NOW 4, wrist-tested). Pattern-coded direction
+  reintroduces a code to memorise AND collides with the count vocabulary.
+  **DECIDED by the user 2026-09-13: two bands stay; side = which wrist
+  buzzes; hop-off and missed-stop get their own patterns on BOTH wrists
+  (both wrists = never a turn).** The addendum's "2 short = left / 1 long =
+  right" is superseded. The haptic vocabulary (turn stages per wrist +
+  arrival + hop-off pre-alert + missed-stop, all on both wrists) must be
+  defined once in PROTOCOL.md and blind-tested together (v2 re-test pending).
+- **Prefer the geofence approach over NotificationListenerService.** The
+  listener scrapes Google Maps' notification text (unofficial, changes with
+  app updates/locale, needs the scary "notification access" permission,
+  Android-only). Geofence = our own `route_progress` distance math on a
+  geolocator stream, portable, and the same engine NEXT #3 (real GPS) needs.
+- **Legacy Directions transit mode gives arrival/departure stops, not the
+  intermediate stop list** → "alert 1 stop before" needs GTFS data (Thai
+  availability unknown). Alert by distance (300-500 m) instead; skip stop
+  counting for the MVP.
+- **This moves development from Flutter web to a real Android phone build**
+  (background GPS, geofence, BLE). Maps SDK Android is already in the key's
+  allowed APIs; Android has been unused so far.
+- Walking mode = existing Routes/drive code with `mode=walking`; the
+  maneuver strings are the same, so the invariant holds unchanged. NEXT #3
+  (real GPS position source) becomes the core of the pivot's mobility work.
+- Underground dead reckoning: defer until the geofence path works on BTS
+  (elevated, GPS fine); MRT stations also have Wi-Fi the fused provider uses.
+
+**Round 4 (same day) — Error Guard = "One-Tap Clipboard Guard"** (addendum
+D): no caregiver-permission layer (the LD user operates the app alone); no
+screenshot-and-recheck loop (cognitive load). Instead: AI extracts amount /
+account number → one-tap **Copy** buttons → user pastes in the bank app, so
+digits are never typed (transposition prevented, not detected). Final
+wording (same day) = three bullets: One-Tap Clipboard Guard / Conflict &
+Uncertainty Alert (blurry or ambiguous field → "check against the photo
+before copying") / Human Confirmation & History. **Background clipboard
+monitoring was dropped** after Claude flagged it is impossible on Android
+10+ / iOS 14+ (only the focused app may read the clipboard). The
+Uncertainty Alert needs per-field confidence from the OCR/LLM step — ask
+for it in the structured output from day one. Also feasible: copy in
+the exact format the bank field expects (digits only vs dashed), show the
+number in large grouped digits + TTS read-back on copy, and an optional
+in-app "paste here to compare" check. Even lower load for Thai bills: point
+the user to the bill's **PromptPay QR** so the bank app scans it and no
+number is handled at all.
 
 ## Stack
 
@@ -108,21 +237,40 @@ The app you're working in is a **prototype/scaffold** of a much larger vision
 - ✅ **Haptic Engine (Phase 4 core, simulated)** — "Start drive" on the Routes
   tab opens `/drive`: a simulated car follows the chosen route (40 km/h ×
   1/2/4 demo control) and **buzzes the correct wrist ahead of each turn** via
-  mock BLE. Cue ladder per turn: PREP (300 m, half intensity) → ALERT
-  (speed × profile lead-time, clamped 60–250 m, pattern from rhythm) → NOW
-  (30 m, strongest). Arrival = gentle pulse on BOTH wrists (never used for
-  turns). Start requires both bands connected ("Connect & start" dialog);
+  mock BLE. Cue ladder per turn (**v2, wrist-tested 2026-09-08**): urgency
+  is encoded as TAP RATE, not strength — `ProximityPulser` taps every
+  4 s / 2 s / 1 s / 0.5 s inside 250 / 150 / 80 / 40 m (intensity 0.54 →
+  0.94); PREP is its own constant (0.42), never below the wearer's floor.
+  Arrival = gentle pulse on BOTH wrists (never used for turns). Start requires both bands connected ("Connect & start" dialog);
   mid-drive disconnect suppresses cues + shows a banner. GitHub issue #4.
 
 ## NEXT (in priority order)
 
+> Updated 2026-10-10. Items 0a-0c follow the proposed pivot and do not need
+> the open decisions; the original list continues from 1.
+
+0a. **Commit the work sitting uncommitted since 2026-09-09** on branch
+    `restructure/single-repo`: MAX30102 v3 sketch + `firmware/tools/sim_ppg.py`,
+    the user's MPU-6050 sketch, `media/simulator.html`, the pivot spec, and
+    CLAUDE.md/README edits. (Ask the user before committing — their call.)
+0b. **Run MAX30102 v3 on hardware** (fingertip, then inner wrist with
+    `WRIST_MODE 1`) and record results in `firmware/MEASUREMENTS.md`.
+0c. **Wrist-flick detector** → `firmware/test/gesture_test` (log gyro to find
+    the roll axis + peak threshold, Python bench, then on-board detector),
+    per addendum C of the pivot spec.
+
 1. **Device #9 — BLE protocol contract** (`firmware/PROTOCOL.md`: UUIDs +
    7-byte packet). Needs NO hardware; unblocks the whole device track
-   (#10–#12). Design it grilling-style with the user.
+   (#10–#12). Design it grilling-style with the user. Under the pivot it must
+   be **two-way** (band → phone: gesture, button, HR window + quality flag,
+   battery) and must define the full haptic vocabulary once (per-wrist turn
+   stages + both-wrist arrival / hop-off / missed-stop).
 2. **AI decision** — 5 proposals await the user (see Pending decisions).
 3. **Real GPS drive mode** — swap the simulated position for a geolocator
    stream projected onto the route via `RoutePath.project` (engine already
    built for this); plus off-route re-routing (state exists, no detection UI).
+   Under the pivot this becomes walking mode + the Transit Hop-off Guard
+   (geofence 300-500 m before the target stop) and needs an Android build.
 4. **Device #12 — real BLE in the app** (`flutter_blue_plus`) behind the same
    `BleController` API; `pulse()` becomes the 7-byte packet write. Hardware:
    ESP32-C3 Super Mini ×2 + AH024 PWM motor etc. (PROJECT_BRIEF ★★ table).
@@ -187,6 +335,67 @@ check questions.
   Still unknown: whether parts are physically in hand yet. Waiting for the
   user to say "start #9".
 
+## Hardware measured 2026-09-08 — six app bugs found, five closed
+
+The wristband hardware works end to end (ESP32-C3 + AH024 over PWM). Measuring
+it on a real wrist produced one number that invalidates several app defaults:
+
+**Perception floor = PWM duty 135 / 255 = intensity 0.53.** Below that the
+motor is not weak, it is *silent*. Full record + method in
+[`firmware/MEASUREMENTS.md`](firmware/MEASUREMENTS.md) (n=1, medium confidence).
+
+Everything below sends the band a value it physically cannot render:
+
+| Bug | Status |
+|---|---|
+| Calibration levels 1-2 were 0.30 / 0.475 — silent | ✅ levels now span 0.0-1.0 (duty 135-255) |
+| `mapPattern` marked "mapped" when the packet was merely *sent* | ✅ the wearer's tap IS the measurement now |
+| The assessment could hand mild-LD users a profile under the floor | ✅ clamped at play time by `floorIntensity` |
+| PREP was intensity × 0.5, arithmetically below the floor | ✅ PREP is its own tested constant (0.42) |
+| `hapu_ema` clamped at 0.1 — could tune a band to silence | ✅ clamps at the wearer's measured floor |
+| Settings slider starts at 0.1, ~48% of it inert | 🟠 **still open** — output is clamped so nothing goes silent, but the control still lies about its range |
+
+**Two different floors, do not conflate them.** The HARDWARE floor (135) is
+what the motor physically cannot go below — that belongs to firmware. The
+PERSONAL floor is what a given wearer can feel, which sits at or above it and
+is now measured by the Test Vibration screen into
+`VibrationProfile.floorIntensity` (default 0.42 = duty 185, the weakest level
+confirmed usable). The app never asks for less than the personal floor; the
+firmware maps whatever it asks for onto the motor's range —
+
+```
+duty = FLOOR + intensity × (255 − FLOOR)
+```
+
+The app keeps sending 0.0-1.0. One change kills all six rows, and swapping to
+an LRA later means editing one constant. This is decision #1 for `PROTOCOL.md`.
+
+Longer term `FLOOR` must be per-user, not a constant: the Test Vibration screen
+(`calibration_controller.dart`) already exists for exactly this and should
+*measure* it rather than assume it.
+
+**Cue patterns v2** (now IN the app — `proximity_pulser.dart` +
+`haptic_cue_player.dart`):
+v1 encoded urgency in amplitude and failed a blind test — the usable range is
+only 135-255 and skin resolves 2-3 steps in it. v2 encodes urgency in **pulse
+count** (PREP 1 tap / ALERT 2 / NOW 4 fast). Blind re-test still pending.
+
+**Sensor I2C pins decided 2026-09-08 (#13 groundwork):** GY-MAX30102 and
+MPU-6050 share one I2C bus on **SDA=GPIO6 / SCL=GPIO7** (moved off the board
+default GPIO8/9 = LED/BOOT). Powered from the 3.3 pin, never 5V (C3 GPIOs are
+not 5V-tolerant and the module pull-ups follow VIN). Smoke test:
+`firmware/test/max30102_test` **v3 (2026-09-09)**: I2C scan → part ID 0x15 →
+two independent HR estimators side by side (`beat` = adaptive per-beat
+detector, `win` = 4 s autocorrelation with a red-vs-IR quality gate), both
+gated on skin contact. SparkFun lib used for I2C/FIFO only; its
+`heartRate.h` was dropped (no contact gate, no refractory, never resets).
+Algorithms validated on a synthetic PPG in Python (20 cases, `win` never
+wrong when it answers); compiles against esp32 core 3.3.11 + SparkFun
+MAX3010x 1.1.2; **not yet run on hardware**. Full wiring + screen legend in
+`firmware/README.md`. The **MPU-6050 is also wired** on the same bus (user's
+raw-reading sketch `firmware/test/mpu-6050/Test-Mpu.ino`, Adafruit_MPU6050
+lib; folder ≠ file name, so rename before opening in the Arduino IDE).
+
 ## Still mock / stubbed (don't mistake for done)
 
 - **BLE** is fully simulated (`ble_controller.dart`) — battery %s on Home's
@@ -208,9 +417,30 @@ check questions.
   `firebase deploy --only firestore:rules`); verified by an unauthenticated
   REST probe: 404/allowed before → 403 PERMISSION_DENIED after. Each signed-in
   user can only read/write their own `users/{uid}` doc.
-- **Google Maps key** (ends `…mhLsvg`) is in `app/web/index.html`,
-  `app/android/app/src/main/AndroidManifest.xml`, and `app/lib/app/maps_config.dart`.
-  It IS **API-restricted** to 4 APIs (Maps JS, Maps SDK Android, Directions,
+- **🔴 2026-10-20: the Maps key `…mhLsvg` was DELETED by the user** before
+  making the repo public. Verified dead: Directions + Places both return
+  `REQUEST_DENIED — This API project was not found` (the Maps key lived in a
+  different Google Cloud project from Firebase, and that project or key is
+  gone). Firebase is unaffected (Firestore 403 by rules, Auth OK).
+- **New Maps key (same day) — ends `…Rbhs`, lives ONLY in `app/.env`**
+  (gitignored; template `app/.env.example` is committed). Created in the
+  Google Cloud project **"Sense-Safe"** (separate from Firebase — never link
+  billing to the Firebase project, it would flip Firebase to Blaze).
+  Restricted: Websites `http://localhost:8090/*` + `http://127.0.0.1:8090/*`;
+  APIs Maps JavaScript + Directions + Places. **Before any deploy, add the
+  real domain to the key's Websites list** or the map shows
+  `RefererNotAllowedMapError`. How it flows: `--dart-define-from-file=.env`
+  → `googleMapsApiKey` (`lib/app/maps_config.dart`, no default) →
+  `loadGoogleMaps()` (`lib/app/maps_loader*.dart`, web injects the Maps
+  `<script>` before `runApp`, 10 s timeout, never blocks startup). The old
+  hard-coded `<script>` in `web/index.html` is gone; AndroidManifest holds
+  the placeholder `ANDROID_MAPS_KEY_NOT_SET` (make a separate Android-
+  restricted key when the Android build starts). Never print or commit the
+  key; to put a new one in, copy it to the clipboard and write `app/.env`
+  from it without echoing.
+- **Old Maps key** (ends `…mhLsvg`, DELETED 2026-10-20) used to be hard-coded
+  in `app/web/index.html`, `AndroidManifest.xml` and `maps_config.dart`; it
+  still sits in git history, dead. It was **API-restricted** to 4 APIs (Maps JS, Maps SDK Android, Directions,
   Places). On **free trial** (no auto-charge; ฿10 budget alert set). Repo is
   **private**, so committing it is acceptable for now.
   - **Decision 2026-07-17 (user chose)**: key-splitting/restrictions stay
@@ -218,6 +448,15 @@ check questions.
     on localhost, Android is unused, and web-service endpoints need a proxy
     anyway (do together with the Gemini proxy). Tracked as issue **#8** with
     the red `launch-blocker` label = the pre-launch checklist.
+- **Public-repo audit 2026-10-20** (all 7 remote branches, full history,
+  issues/PRs): no `.env`, keystores, private keys, Gemini/Claude/GitHub
+  tokens, or personal data (emails/phones/IDs) in files; interview form is a
+  blank template. **Only blocker to going public = the Maps key `…mhLsvg`**
+  (in history since 2026-06-28, so deleting it from files does not help —
+  restrict it by HTTP referrer + Android package/SHA-1, or rotate it). Also
+  public on flip: commit author emails (incl. a teammate's student email),
+  team names in the report PDF, local paths in `.claude/skills` and
+  `.vscode/settings.json`. No LICENSE file.
 - **Gemini API** (for the AI assistant, `gemini_service.dart`): key is passed
   via `--dart-define=GEMINI_API_KEY=...`, never committed to source — good
   practice, but not yet wired into `/start-system` because there's no working
@@ -240,7 +479,8 @@ check questions.
 ## How to run
 
 Preferred: the **`/start-system`** skill → serves Flutter **web** on **port 8090**
-(`flutter run -d web-server --web-port=8090`). Always reuse 8090; the skill
+(`flutter run -d web-server --web-port=8090 --dart-define-from-file=.env`;
+without `app/.env` the app still runs but maps/routing are off). Always reuse 8090; the skill
 frees the port first to avoid orphaned `dart.exe`.
 
 Manual:
@@ -266,7 +506,8 @@ app/lib/
   main.dart              app entry (ProviderScope + MaterialApp.router)
   firebase_options.dart  generated by flutterfire — never hand-edit
   app/                    router.dart, theme.dart (AppColors + TextTheme),
-                           maps_config.dart, app_navigation.dart
+                           maps_config.dart (key from .env), maps_loader*.dart
+                           (web: inject Maps script), app_navigation.dart
                            (home tab + pending-destination providers)
   models/                 app_user, learning_difference, survey,
                            vibration_profile, route_option, route_maneuver,
@@ -277,7 +518,8 @@ app/lib/
                            profile/location/gemini services;
                            directions_service + places_service (each with
                            _fetch/_fetch_io/_fetch_web platform split);
-                           cue_scheduler, route_progress, haptic_cue_player
+                           cue_scheduler, route_progress, haptic_cue_player,
+                           proximity_pulser (v2 rate ladder), hapu_ema
   features/
     auth/                 login, register, forgot password (real reset email)
     onboarding/            welcome + connect wristbands
@@ -342,15 +584,24 @@ app/lib/
 
 ## Tests / quality
 
-- `flutter analyze` clean; **42 tests** passing. Files: `profile_service_test`
+- `flutter analyze` clean; **51 tests** passing (re-verified 2026-10-10).
+  Files: `profile_service_test`
   (scoring), `route_maneuver_test` (SAFETY: exhaustive maneuver→wrist),
   `route_progress_test` (geometry), `cue_scheduler_test` (cue order/dedupe),
+  `proximity_pulser_test` (v2 distance→tap-rate ladder),
   `hapu_ema_test` (EMA math: exact deltas, convergence, clamps, no-FP-drift),
   `favourite_test` + `recent_trip_test` + `vibration_profile_test`
   (model round-trips), `widget_test` (boot smoke). Run `flutter test`.
+- Firmware has no CI. Its checks: compile with the Arduino IDE's bundled CLI
+  (`%LOCALAPPDATA%\Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe
+  compile --fqbn esp32:esp32:esp32c3:CDCOnBoot=cdc <sketch dir>`) and, for the
+  MAX30102 algorithms, `python firmware/tools/sim_ppg.py` (target: 0 wrong).
 
 ## Git / GitHub
 
+- **Current working branch: `restructure/single-repo`** (all Sept work; not
+  yet merged to `main`; last commit 2026-09-08, plus uncommitted work — see
+  NEXT 0a).
 - Repo: `github.com/witthayut/Sense-Safe` (**private**). Default branch **main**
   has all current work, including teammate `Tam`'s frontend redesign (ported
   earlier) and Gemini assistant feature (merged 2026-07-02). Feature branches

@@ -1,28 +1,23 @@
 /// Google Maps Platform configuration.
 ///
-/// Replace [googleMapsApiKey] with your own key from Google Cloud, then enable
-/// these APIs on the project and restrict the key:
-///   - Maps JavaScript API   (web map)
-///   - Maps SDK for Android   (Android map)
-///   - Directions API         (A → B routing)
+/// The key is NOT in source code. It lives in `app/.env` (gitignored; copy
+/// `app/.env.example` to start) and reaches the app at build time:
 ///
-/// SECURITY: don't ship a real, unrestricted key in a public repo. Restrict it
-/// by HTTP referrer (web) and Android app signature, and consider moving it to
-/// a `--dart-define` / gitignored file before release.
+///   flutter run -d web-server --web-port=8090 --dart-define-from-file=.env
 ///
-/// The same key string must also be pasted into:
-///   - web/index.html  (the Maps JavaScript <script> tag)
-///   - android/app/src/main/AndroidManifest.xml  (com.google.android.geo.API_KEY)
+/// The key is a browser key, so it ends up in the page the browser loads no
+/// matter what. What protects it is the restriction set in Google Cloud:
+///   - Application restrictions: Websites → http://localhost:8090/*,
+///     http://127.0.0.1:8090/* (+ the real domain before any deploy)
+///   - API restrictions: Maps JavaScript API, Directions API, Places API
+///
+/// Used on web to load the Maps script (see maps_loader.dart) and on mobile
+/// for the Directions / Places HTTP calls. Android's native map reads a
+/// separate key from AndroidManifest.xml (not set yet — Android is unused).
 library;
 
-/// Used for the Directions API HTTP calls. Falls back to a build-time
-/// --dart-define=GOOGLE_MAPS_API_KEY=... if provided.
-const String googleMapsApiKey = String.fromEnvironment(
-  'GOOGLE_MAPS_API_KEY',
-  defaultValue: 'AIzaSyBIUpO5Wc_gIEZjcpGg9Ep-IkmDhmhLsvg',
-);
+const String googleMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
 
-/// True when a real key has been provided (used to show a friendly hint
-/// instead of failing silently).
-bool get hasMapsApiKey =>
-    googleMapsApiKey.isNotEmpty && googleMapsApiKey != 'YOUR_GOOGLE_MAPS_API_KEY';
+/// True when a key was provided (used to show a friendly hint instead of
+/// failing silently when someone runs the app without `app/.env`).
+bool get hasMapsApiKey => googleMapsApiKey.isNotEmpty;
